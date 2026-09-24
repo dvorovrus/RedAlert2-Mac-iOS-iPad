@@ -1,0 +1,64 @@
+name: Build RA2 iPad Shell
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Create placeholder resource folders
+        shell: bash
+        run: |
+          mkdir -p ios/Resources/WebDist ios/Resources/GameRes
+          printf '%s\n' '<!doctype html><html><body>RA2 shell placeholder</body></html>' > ios/Resources/WebDist/index.html
+          printf '%s\n' '{"files":[]}' > ios/Resources/GameRes/manifest.json
+
+      - name: Generate Xcode project
+        shell: bash
+        env:
+          RA2_TEAM_ID: ""
+          RA2_BUNDLE_ID: com.dvorov.ra2yr
+          RA2_APP_NAME: "Yuri's Revenge"
+        run: |
+          cd ios
+          xcodegen generate
+
+      - name: Build unsigned iOS app
+        shell: bash
+        run: |
+          xcodebuild \
+            -project ios/RA2.xcodeproj \
+            -scheme RA2 \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            DEVELOPMENT_TEAM="" \
+            build
+
+      - name: Package unsigned shell IPA
+        shell: bash
+        run: |
+          APP="build/DerivedData/Build/Products/Release-iphoneos/RA2.app"
+          test -d "$APP"
+          rm -rf Payload RA2-shell-unsigned.ipa
+          mkdir -p Payload
+          cp -R "$APP" Payload/RA2.app
+          ditto -c -k --sequesterRsrc --keepParent Payload RA2-shell-unsigned.ipa
+          ls -lh RA2-shell-unsigned.ipa
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RA2-shell-unsigned
+          path: RA2-shell-unsigned.ipa
+          if-no-files-found: error
