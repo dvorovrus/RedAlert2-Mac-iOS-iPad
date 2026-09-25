@@ -305,7 +305,9 @@ export class GameRes {
             if (await baseModRfsDir.containsEntry(modName)) {
                 console.info(`Loading mod "${modName}"...`);
                 specificModDir = await baseModRfsDir.getDirectory(modName);
-                rfs.addDirectory(specificModDir);
+                // Mod files must shadow the base game. Chrono Divide mods often
+                // intentionally replace rules.ini/art.ini/cache.mix/audio.bag.
+                rfs.addDirectory(specificModDir, true);
                 Engine.setActiveMod(modName);
             }
             else {
