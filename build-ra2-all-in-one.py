@@ -178,16 +178,16 @@ def main() -> None:
     ap = argparse.ArgumentParser(
         description="Build one RA2 iPad app containing RA2, Yuri's Revenge and multiple RA2 mods."
     )
-    ap.add_argument("--shell", default="RA2-shell-unsigned.ipa")
-    ap.add_argument("--base-full", default="RA2-YR-FULL-unsigned.ipa")
-    ap.add_argument("--webdist", default="WebDist")
+    ap.add_argument("--shell", default="input/RA2-shell-unsigned.ipa")
+    ap.add_argument("--base-full", default="input/RA2-YR-FULL-unsigned.ipa")
+    ap.add_argument("--webdist", default="redalert2/dist")
     ap.add_argument(
         "--mod",
         action="append",
         default=[],
         help="Repeatable. Use id=PATH (recommended) or just PATH."
     )
-    ap.add_argument("--output", default="RA2-ALL-IN-ONE-FULL-unsigned.ipa")
+    ap.add_argument("--output", default="output/RA2-ALL-IN-ONE-FULL-unsigned.ipa")
     ap.add_argument("--bundle-id", default="com.dvorov.ra2yr")
     ap.add_argument("--name", default="Red Alert 2")
     a = ap.parse_args()
@@ -197,6 +197,7 @@ def main() -> None:
     base = (cwd / a.base_full).resolve()
     webdist = (cwd / a.webdist).resolve()
     output = (cwd / a.output).resolve()
+    output.parent.mkdir(parents=True, exist_ok=True)
 
     if not shell.is_file():
         die(f"Не найден новый shell IPA: {shell}")
@@ -205,7 +206,16 @@ def main() -> None:
     if not webdist.is_dir():
         die(f"Не найден свежий WebDist: {webdist}")
 
-    mod_args = a.mod or ["scorched-earth=ScorchedEarth"]
+    if a.mod:
+        mod_args = a.mod
+    else:
+        mods_root = cwd / "mods"
+        if not mods_root.is_dir():
+            die(f"Не найдена папка модов: {mods_root}")
+        mod_dirs = sorted(p for p in mods_root.iterdir() if p.is_dir())
+        if not mod_dirs:
+            die(f"В {mods_root} нет папок модов.")
+        mod_args = [f"{slugify(p.name)}={p}" for p in mod_dirs]
     mods = [make_mod_spec(raw, cwd) for raw in mod_args]
     ids = [m.mod_id for m in mods]
     if len(ids) != len(set(ids)):
