@@ -190,7 +190,12 @@ export class Application {
             this.currentLocale = 'en-US';
             return;
         }
-        let csfFileValue = currentConfig.getGeneralData().get('csfFile') || 'ra2/general.csf';
+        const launcherSelectedEngine =
+            typeof window !== 'undefined' &&
+            new URLSearchParams(window.location.search).has('engine');
+        let csfFileValue = launcherSelectedEngine
+            ? (currentConfig.engine === 'yr' ? 'generalmd.csf' : 'general.csf')
+            : (currentConfig.getGeneralData().get('csfFile') || 'general.csf');
         const csfFileName = Array.isArray(csfFileValue) ? csfFileValue[0] : csfFileValue;
         console.log(`[Application] Attempting to load CSF file: ${csfFileName}`);
         try {
