@@ -51,6 +51,11 @@ button,a{font:inherit}
 .info-row{min-height:18px;display:grid;grid-template-columns:62px minmax(0,1fr);gap:8px;align-items:center;border-top:1px solid rgba(255,255,255,.06);font-size:9px}
 .info-label{color:#8e897a}
 .info-value{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#fff3a2}
+.info-value.signing-ok{color:#9cff8d}
+.info-value.signing-warning{color:#ffe36d}
+.info-value.signing-danger{color:#ff8c6d}
+.info-value.signing-expired{color:#ff4b3e;font-weight:800}
+.info-value.signing-na{color:#9d988b}
 .info-links{display:flex;gap:6px;margin-top:6px}
 .info-link{flex:1;min-height:26px;display:flex;align-items:center;justify-content:center;padding:4px 6px;border:1px solid #5f5900;background:#111;color:#fff300;text-decoration:none;text-align:center;font:800 9px "Courier New",monospace;letter-spacing:.04em}
 .info-link.disabled{opacity:.3;pointer-events:none}
@@ -97,6 +102,7 @@ button,a{font:inherit}
       <div class="mod-info-title"><span>GAME / MOD INFO</span><span id="infoType">ORIGINAL</span></div>
       <div class="info-row"><span class="info-label">CREATOR</span><span class="info-value" id="infoCreator">Westwood Studios</span></div>
       <div class="info-row"><span class="info-label">VERSION</span><span class="info-value" id="infoVersion">1.006</span></div>
+      <div class="info-row"><span class="info-label">SIGNING</span><span class="info-value signing-na" id="signingValue">CHECKING...</span></div>
       <div class="info-links">
         <a class="info-link disabled" id="authorLink" href="#" target="_blank" rel="noopener noreferrer">CREATOR ↗</a>
         <a class="info-link disabled" id="modLink" href="#" target="_blank" rel="noopener noreferrer">MOD PAGE ↗</a>
@@ -153,7 +159,7 @@ let games=[
   {id:"yr",name:"YURI'S REVENGE",short:"YR",kind:"EXPANSION",kicker:"EXPANSION",desc:"Yuri's Revenge with Yuri's army, expanded units, maps and mechanics.",route:"index.html?engine=yr",routeLabel:"engine=yr",engine:"yr",creator:"Westwood Studios",version:"1.001",creatorUrl:"",modUrl:"",image:"launcher-assets/yuri.jpg",fallback:"launcher-assets/ra2.jpg",focal:"50% 35%"}
 ];
 const $=id=>document.getElementById(id);
-const tvScreen=$("tvScreen"),heroImage=$("heroImage"),choices=$("choices"),nameEl=$("name"),kicker=$("kicker"),desc=$("desc"),tMode=$("tMode"),tClass=$("tClass"),tRoute=$("tRoute"),infoCreator=$("infoCreator"),infoVersion=$("infoVersion"),infoType=$("infoType"),authorLink=$("authorLink"),modLink=$("modLink"),helper=$("helper");
+const tvScreen=$("tvScreen"),heroImage=$("heroImage"),choices=$("choices"),nameEl=$("name"),kicker=$("kicker"),desc=$("desc"),tMode=$("tMode"),tClass=$("tClass"),tRoute=$("tRoute"),infoCreator=$("infoCreator"),infoVersion=$("infoVersion"),infoType=$("infoType"),signingValue=$("signingValue"),authorLink=$("authorLink"),modLink=$("modLink"),helper=$("helper");
 let buttons=[],current=0,audioCtx=null,master=null,musicBus=null,sfxBus=null,soundEnabled=localStorage.getItem("launcherSound")!=="off",musicStarted=false,musicTimer=null;
 let targetX=0,targetY=0,currentX=0,currentY=0,autoPhase=0,switchToken=0;
 function animateHero(){
@@ -192,6 +198,53 @@ function parseModIni(text){
 function setLink(el,url){
   if(url){el.href=url;el.classList.remove("disabled");el.setAttribute("aria-disabled","false")}
   else{el.href="#";el.classList.add("disabled");el.setAttribute("aria-disabled","true")}
+}
+
+function updateSigningStatus(){
+  const signing=window.__RA2_SHELL__&&window.__RA2_SHELL__.signing;
+  signingValue.classList.remove("signing-ok","signing-warning","signing-danger","signing-expired","signing-na");
+
+  if(!signing||!signing.available||!signing.expirationDate){
+    signingValue.textContent="N/A";
+    signingValue.classList.add("signing-na");
+    signingValue.title="No embedded provisioning profile information is available.";
+    return;
+  }
+
+  const expiresAt=Date.parse(signing.expirationDate);
+  if(!Number.isFinite(expiresAt)){
+    signingValue.textContent="N/A";
+    signingValue.classList.add("signing-na");
+    return;
+  }
+
+  const remaining=expiresAt-Date.now();
+  const day=24*60*60*1000;
+  const hour=60*60*1000;
+  const minute=60*1000;
+
+  if(remaining<=0){
+    signingValue.textContent="EXPIRED";
+    signingValue.classList.add("signing-expired");
+  }else{
+    const days=Math.floor(remaining/day);
+    const hours=Math.floor((remaining%day)/hour);
+    const minutes=Math.floor((remaining%hour)/minute);
+
+    signingValue.textContent=days>0
+      ? days+"D "+hours+"H LEFT"
+      : hours>0
+        ? hours+"H "+minutes+"M LEFT"
+        : Math.max(0,minutes)+"M LEFT";
+
+    if(remaining<=day)signingValue.classList.add("signing-danger");
+    else if(remaining<=3*day)signingValue.classList.add("signing-warning");
+    else signingValue.classList.add("signing-ok");
+  }
+
+  const expiryText=new Date(expiresAt).toLocaleString();
+  const profile=signing.profileName?(" · "+signing.profileName):"";
+  signingValue.title="Expires: "+expiryText+profile;
 }
 async function discoverBundledMods(){
   try{
@@ -344,6 +397,8 @@ document.addEventListener("gestureend",e=>e.preventDefault(),{passive:false});
 let lastTouchEnd=0;
 document.addEventListener("touchend",e=>{const now=Date.now();if(now-lastTouchEnd<=300)e.preventDefault();lastTouchEnd=now},{passive:false});
 window.addEventListener("pointerdown",()=>ensureAudio(),{once:true});
+updateSigningStatus();
+setInterval(updateSigningStatus,60000);
 renderChoices();
 setGame(0,false);
 discoverBundledMods().then(()=>{
