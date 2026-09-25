@@ -13,7 +13,7 @@ from pathlib import Path
 
 SUPPORTED_MOD_EXT = {
     ".mix", ".mmx", ".ini", ".csf", ".mpr", ".map", ".pkt", ".png", ".webm",
-    ".bag", ".idx",
+    ".bag", ".idx", ".pal", ".shp", ".txt",
 }
 
 @dataclass
