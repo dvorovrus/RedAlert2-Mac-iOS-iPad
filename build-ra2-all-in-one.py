@@ -212,9 +212,15 @@ def main() -> None:
         mods_root = cwd / "mods"
         if not mods_root.is_dir():
             die(f"Не найдена папка модов: {mods_root}")
-        mod_dirs = sorted(p for p in mods_root.iterdir() if p.is_dir())
+        all_mod_dirs = sorted(p for p in mods_root.iterdir() if p.is_dir())
+        mod_dirs = [p for p in all_mod_dirs if (p / "modcd.ini").is_file()]
+        skipped_dirs = [p for p in all_mod_dirs if not (p / "modcd.ini").is_file()]
+        if skipped_dirs:
+            print("Рабочие/неподготовленные папки пропущены (нет modcd.ini):")
+            for p in skipped_dirs:
+                print(f"  {p.name}")
         if not mod_dirs:
-            die(f"В {mods_root} нет папок модов.")
+            die(f"В {mods_root} нет подготовленных модов с modcd.ini.")
         mod_args = [f"{slugify(p.name)}={p}" for p in mod_dirs]
     mods = [make_mod_spec(raw, cwd) for raw in mod_args]
     ids = [m.mod_id for m in mods]
