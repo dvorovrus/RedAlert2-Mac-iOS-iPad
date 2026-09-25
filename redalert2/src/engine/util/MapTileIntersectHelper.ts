@@ -16,9 +16,13 @@ interface Viewport {
 interface CameraPan {
     getPan(): Point;
 }
+interface CameraZoom {
+    getZoom(): number;
+}
 interface Scene {
     viewport: Viewport;
     cameraPan: CameraPan;
+    cameraZoom?: CameraZoom;
 }
 interface MapTile {
     rx: number;
@@ -87,10 +91,13 @@ export class MapTileIntersectHelper {
         const viewport = this.scene.viewport;
         const origin = IsoCoords.worldToScreen(0, 0);
         const pan = this.scene.cameraPan.getPan();
+        const zoom = this.scene.cameraZoom?.getZoom() ?? 1;
         const screenPos = IsoCoords.tile3dToScreen(tile.rx + 0.5, tile.ry + 0.5, tile.z + tileElevation);
+        const centerX = viewport.x + viewport.width / 2;
+        const centerY = viewport.y + viewport.height / 2;
         return {
-            x: screenPos.x - origin.x - pan.x + viewport.x + viewport.width / 2,
-            y: screenPos.y - origin.y - pan.y + viewport.y + viewport.height / 2
+            x: centerX + (screenPos.x - origin.x - pan.x) * zoom,
+            y: centerY + (screenPos.y - origin.y - pan.y) * zoom
         };
     }
     intersectTilesByScreenPos(screenPoint: Point, tileElevation: number = 0): MapTile[] {
@@ -101,9 +108,13 @@ export class MapTileIntersectHelper {
     private intersectTilesByScreenPosLegacy(screenPoint: Point, tileElevation: number = 0): MapTile[] {
         const origin = IsoCoords.worldToScreen(0, 0);
         const pan = this.scene.cameraPan.getPan();
+        const viewport = this.scene.viewport;
+        const zoom = this.scene.cameraZoom?.getZoom() ?? 1;
+        const centerX = viewport.x + viewport.width / 2;
+        const centerY = viewport.y + viewport.height / 2;
         const worldScreenPos = {
-            x: screenPoint.x + origin.x + pan.x - this.scene.viewport.width / 2,
-            y: screenPoint.y + origin.y + pan.y - this.scene.viewport.height / 2
+            x: (screenPoint.x - centerX) / zoom + origin.x + pan.x,
+            y: (screenPoint.y - centerY) / zoom + origin.y + pan.y
         };
         const projectedWorldScreenY = worldScreenPos.y + IsoCoords.tileHeightToScreen(tileElevation);
         const worldPos = IsoCoords.screenToWorld(worldScreenPos.x, projectedWorldScreenY);
@@ -140,7 +151,7 @@ export class MapTileIntersectHelper {
         if (intersectedTiles.length === 0) {
             return this.intersectTilesByScreenPosLegacy({
                 x: screenPoint.x,
-                y: screenPoint.y - IsoCoords.tileHeightToScreen(1)
+                y: screenPoint.y - IsoCoords.tileHeightToScreen(1) * (this.scene.cameraZoom?.getZoom() ?? 1)
             }, tileElevation);
         }
         return intersectedTiles;
@@ -151,12 +162,16 @@ export class MapTileIntersectHelper {
         const intersectedTiles = this.intersectedTilesScratch;
         const origin = IsoCoords.worldToScreen(0, 0);
         const pan = this.scene.cameraPan.getPan();
-        const fallbackOffsetY = IsoCoords.tileHeightToScreen(1);
+        const viewport = this.scene.viewport;
+        const zoom = this.scene.cameraZoom?.getZoom() ?? 1;
+        const centerX = viewport.x + viewport.width / 2;
+        const centerY = viewport.y + viewport.height / 2;
+        const fallbackOffsetY = IsoCoords.tileHeightToScreen(1) * zoom;
         let currentY = screenPoint.y;
         for (let attempt = 0; attempt < 4; attempt += 1) {
             intersectedTiles.length = 0;
-            const worldScreenX = screenPoint.x + origin.x + pan.x - this.scene.viewport.width / 2;
-            const worldScreenY = currentY + origin.y + pan.y - this.scene.viewport.height / 2;
+            const worldScreenX = (screenPoint.x - centerX) / zoom + origin.x + pan.x;
+            const worldScreenY = (currentY - centerY) / zoom + origin.y + pan.y;
             const projectedWorldScreenY = worldScreenY + IsoCoords.tileHeightToScreen(tileElevation);
             const worldPos = IsoCoords.screenToWorld(worldScreenX, projectedWorldScreenY);
             const tileX = Math.floor(worldPos.x / Coords.LEPTONS_PER_TILE);
