@@ -421,23 +421,8 @@ def serialize_key_new(node: dict) -> bytes:
     return bytes(out)
 
 
-def emit_activation_xmlf_without_string_table(root: dict, out_path: Path) -> None:
-    # XCC processes the string-table category after sounds and before VXLs.
-    # Old RA2 distributions sometimes make the CSF diff step fail, which
-    # aborts activation before expand/ecache MIX files are written.  Emit a
-    # temporary activation package with only category 9 removed; all gameplay
-    # INIs, SHP/HVA/VXL assets, screens, interface and sounds remain intact.
-    import copy
-
-    stripped = copy.deepcopy(root)
-    stripped["keys"].pop(9, None)  # ct_st / string-table
-
-    body = serialize_key_new(stripped)
-
-    # Eagle Red bundles an old XCC Mod Launcher and its original payload is
-    # XIF version 1. Emit the temporary package in that same legacy format.
-    # Newer XCC accepts v2/fast XIF, but old launchers can reject it with
-    # "Error reading mod."
+def write_legacy_xif_v1(root: dict, out_path: Path) -> None:
+    body = serialize_key_new(root)
     packed = zlib.compress(body, 9)
     header = struct.pack(
         "<iii",
@@ -447,11 +432,43 @@ def emit_activation_xmlf_without_string_table(root: dict, out_path: Path) -> Non
     )
     out_path.write_bytes(header + packed)
 
-    # Validate the exact bytes we just wrote with our parser before the user
-    # hands them to the old launcher.
-    parsed, _ = parse_xif(out_path.read_bytes())
-    if 9 in parsed["keys"]:
-        raise ParseError("Generated activation XIF still contains string-table")
+    # Validate exactly what we emitted.
+    parse_xif(out_path.read_bytes())
+
+
+def emit_activation_xmlfs(root: dict, main_out: Path, csf_out: Path) -> None:
+    # XCC processes the string-table category after sounds and before VXLs.
+    # Split activation into two passes:
+    #   1) everything except ct_st -> expand/ecache/audio
+    #   2) ct_st only -> merged ra2.csf
+    #
+    # Keep metadata/mode/module keys in both packages. Set deactivate=0 so the
+    # old launcher does not remove the files after activation.
+    import copy
+
+    main_root = copy.deepcopy(root)
+    main_root["keys"].pop(9, None)  # ct_st / string-table
+    if 23 in main_root["values"]:
+        main_root["values"][23] = {"type": VT_INT32, "int": 0}
+    write_legacy_xif_v1(main_root, main_out)
+
+    parsed_main, _ = parse_xif(main_out.read_bytes())
+    if 9 in parsed_main["keys"]:
+        raise ParseError("Generated main activation XIF still contains string-table")
+
+    csf_root = copy.deepcopy(root)
+    csf_root["keys"] = {
+        kid: child
+        for kid, child in csf_root["keys"].items()
+        if kid == 9 or kid >= 0x100
+    }
+    if 23 in csf_root["values"]:
+        csf_root["values"][23] = {"type": VT_INT32, "int": 0}
+    write_legacy_xif_v1(csf_root, csf_out)
+
+    parsed_csf, _ = parse_xif(csf_out.read_bytes())
+    if 9 not in parsed_csf["keys"]:
+        raise ParseError("Generated CSF activation XIF has no string-table")
 
 
 def extract_embedded_xif(exe: bytes) -> bytes:
@@ -564,7 +581,8 @@ def main() -> int:
     )
 
     activation_xmlf = out / "activation-no-string-table.xmlf"
-    emit_activation_xmlf_without_string_table(root, activation_xmlf)
+    activation_csf_xmlf = out / "activation-string-table-only.xmlf"
+    emit_activation_xmlfs(root, activation_xmlf, activation_csf_xmlf)
 
     category_counts = Counter(x["category"] for x in inventory)
     encoding_counts = Counter(x["encoding"] for x in inventory)
@@ -579,6 +597,7 @@ def main() -> int:
     print(f"MFS:         {meta['mod_mfs'] or '(default 98)'}")
     print(f"Files:       {len(inventory)}")
     print(f"Activation:  {activation_xmlf}")
+    print(f"CSF pass:    {activation_csf_xmlf}")
     print()
     print("Categories:")
     for name, count in sorted(category_counts.items()):
