@@ -1,0 +1,1 @@
+Place launcher backgrounds here before building:\n- ra2.jpg\n- yuri.jpg\n- scorched.jpg\n\nVite copies this folder into dist/launcher-assets/.\n
