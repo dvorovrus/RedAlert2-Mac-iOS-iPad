@@ -4,16 +4,25 @@ from __future__ import annotations
 import argparse
 import json
 import plistlib
+import re
 import sys
 import time
 import zipfile
+from dataclasses import dataclass
 from pathlib import Path
 
-MOD_ID = "scorched-earth"
 SUPPORTED_MOD_EXT = {
     ".mix", ".mmx", ".ini", ".csf", ".mpr", ".map", ".pkt", ".png", ".webm",
     ".bag", ".idx",
 }
+
+@dataclass
+class ModSpec:
+    mod_id: str
+    root: Path
+    files: list[Path]
+    skipped: list[Path]
+    meta: bytes
 
 def die(msg: str) -> None:
     print(f"\nОШИБКА: {msg}", file=sys.stderr)
@@ -21,6 +30,33 @@ def die(msg: str) -> None:
 
 def norm(s: str) -> str:
     return s.replace("\\", "/")
+
+def slugify(value: str) -> str:
+    value = value.strip().lower().replace(" ", "-")
+    value = re.sub(r"[^a-z0-9_-]+", "-", value)
+    value = re.sub(r"-+", "-", value).strip("-_")
+    if not value:
+        die("Не удалось определить ID мода")
+    return value
+
+def parse_general_ini(data: bytes) -> dict[str, str]:
+    try:
+        text = data.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = data.decode("cp1252", errors="replace")
+    section = ""
+    out: dict[str, str] = {}
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith(";") or line.startswith("#"):
+            continue
+        if line.startswith("[") and line.endswith("]"):
+            section = line[1:-1].strip().lower()
+            continue
+        if section == "general" and "=" in line:
+            key, value = line.split("=", 1)
+            out[key.strip().lower()] = value.split(";", 1)[0].strip()
+    return out
 
 def find_app_root(names: list[str]) -> str:
     roots = sorted({
@@ -56,6 +92,8 @@ def collect_webdist(root: Path) -> list[tuple[Path, str]]:
             files.append((src, src.relative_to(root).as_posix()))
     if not any(rel == "index.html" for _, rel in files):
         die(f"В {root} не найден index.html. Сначала пересобери WebDist.")
+    if not any(rel == "launcher.html" for _, rel in files):
+        die(f"В {root} не найден launcher.html.")
     return files
 
 def collect_mod(root: Path) -> tuple[list[Path], list[Path]]:
@@ -81,24 +119,74 @@ def collect_mod(root: Path) -> tuple[list[Path], list[Path]]:
         chosen.append(src)
     return chosen, skipped
 
-def mod_meta() -> bytes:
-    return b"""[General]
-ID=scorched-earth
-Name=Scorched Earth
-Description=Scorched Earth RA2 overhaul for the iPad launcher.
-Author=ATHSE
-Version=2023-07-20
-Website=https://www.moddb.com/mods/scorched-earth-ra2-mod-with-smart-ai
-"""
+def generated_meta(mod_id: str, name: str) -> bytes:
+    return (
+        "[General]\n"
+        f"ID={mod_id}\n"
+        f"Name={name}\n"
+        f"Description={name} packaged for the iPad launcher.\n"
+        "Version=unknown\n"
+    ).encode("utf-8")
+
+def parse_mod_arg(raw: str, cwd: Path) -> tuple[str | None, Path]:
+    # Preferred form: id=path. Bare paths remain supported.
+    if "=" in raw:
+        maybe_id, maybe_path = raw.split("=", 1)
+        if re.fullmatch(r"[A-Za-z0-9_-]+", maybe_id.strip()):
+            return maybe_id.strip().lower(), (cwd / maybe_path).resolve()
+    return None, (cwd / raw).resolve()
+
+def make_mod_spec(raw: str, cwd: Path) -> ModSpec:
+    explicit_id, root = parse_mod_arg(raw, cwd)
+    if not root.is_dir():
+        die(f"Не найдена папка мода: {root}")
+
+    original_meta = root / "modcd.ini"
+    meta = original_meta.read_bytes() if original_meta.is_file() else b""
+    parsed = parse_general_ini(meta) if meta else {}
+
+    mod_id = explicit_id or parsed.get("id")
+    if not mod_id:
+        if root.name.lower() in {"scorchedearth", "scorched-earth"}:
+            mod_id = "scorched-earth"
+        else:
+            mod_id = slugify(root.name)
+    mod_id = slugify(mod_id)
+
+    if not meta:
+        name = root.name.replace("-", " ").replace("_", " ").strip().title()
+        meta = generated_meta(mod_id, name)
+    elif parsed.get("id", "").strip().lower() != mod_id:
+        # The folder ID is authoritative for our packaged layout. Rewrite/add ID
+        # while preserving the rest of the original metadata.
+        try:
+            text = meta.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            text = meta.decode("cp1252", errors="replace")
+        if re.search(r"(?im)^\s*ID\s*=", text):
+            text = re.sub(r"(?im)^\s*ID\s*=.*$", f"ID={mod_id}", text, count=1)
+        else:
+            text = re.sub(r"(?im)^\s*\[General\]\s*$", f"[General]\nID={mod_id}", text, count=1)
+        meta = text.encode("utf-8")
+
+    files, skipped = collect_mod(root)
+    if not files:
+        die(f"Не найдено поддерживаемых файлов мода в {root}")
+    return ModSpec(mod_id, root, files, skipped, meta)
 
 def main() -> None:
     ap = argparse.ArgumentParser(
-        description="Build one RA2 iPad app containing RA2, Yuri's Revenge and Scorched Earth."
+        description="Build one RA2 iPad app containing RA2, Yuri's Revenge and multiple RA2 mods."
     )
     ap.add_argument("--shell", default="RA2-shell-unsigned.ipa")
     ap.add_argument("--base-full", default="RA2-YR-FULL-unsigned.ipa")
     ap.add_argument("--webdist", default="WebDist")
-    ap.add_argument("--mod", default="ScorchedEarth")
+    ap.add_argument(
+        "--mod",
+        action="append",
+        default=[],
+        help="Repeatable. Use id=PATH (recommended) or just PATH."
+    )
     ap.add_argument("--output", default="RA2-ALL-IN-ONE-FULL-unsigned.ipa")
     ap.add_argument("--bundle-id", default="com.dvorov.ra2yr")
     ap.add_argument("--name", default="Red Alert 2")
@@ -108,7 +196,6 @@ def main() -> None:
     shell = (cwd / a.shell).resolve()
     base = (cwd / a.base_full).resolve()
     webdist = (cwd / a.webdist).resolve()
-    mod = (cwd / a.mod).resolve()
     output = (cwd / a.output).resolve()
 
     if not shell.is_file():
@@ -117,21 +204,24 @@ def main() -> None:
         die(f"Не найден рабочий RA2/YR FULL IPA: {base}")
     if not webdist.is_dir():
         die(f"Не найден свежий WebDist: {webdist}")
-    if not mod.is_dir():
-        die(f"Не найдена папка Scorched Earth: {mod}")
+
+    mod_args = a.mod or ["scorched-earth=ScorchedEarth"]
+    mods = [make_mod_spec(raw, cwd) for raw in mod_args]
+    ids = [m.mod_id for m in mods]
+    if len(ids) != len(set(ids)):
+        die(f"Повторяющиеся ID модов: {ids}")
 
     web_files = collect_webdist(webdist)
-    mod_files, skipped = collect_mod(mod)
-    if not mod_files:
-        die("Не найдено файлов Scorched Earth для упаковки.")
 
     print("=== RA2 ALL-IN-ONE iPad ===")
     print("  Red Alert 2")
     print("  Yuri's Revenge")
-    print("  Scorched Earth")
+    for mod in mods:
+        meta = parse_general_ini(mod.meta)
+        print(f"  {meta.get('name', mod.mod_id)} [{mod.mod_id}]")
     print(f"WebDist: {len(web_files)} файлов")
-    print(f"Scorched Earth: {len(mod_files)} файлов")
-    print(f"Пропущено служебных файлов мода: {len(skipped)}")
+    for mod in mods:
+        print(f"{mod.mod_id}: {len(mod.files)} файлов, пропущено: {len(mod.skipped)}")
 
     with zipfile.ZipFile(shell, "r") as zs, zipfile.ZipFile(base, "r") as zb:
         shell_names = zs.namelist()
@@ -157,19 +247,23 @@ def main() -> None:
         new_plist = plistlib.dumps(plist, fmt=plistlib.FMT_BINARY)
 
         old_manifest = json.loads(zb.read(base_manifest))
+        selected_prefixes = tuple(f"mods/{m.mod_id}/" for m in mods)
         manifest_files = [
             f for f in old_manifest.get("files", [])
-            if not str(f.get("path", "")).lower().startswith(f"mods/{MOD_ID}/")
+            if not str(f.get("path", "")).lower().startswith(selected_prefixes)
         ]
 
-        original_meta = mod / "modcd.ini"
-        meta = original_meta.read_bytes() if original_meta.is_file() else mod_meta()
-        manifest_files.append({"path": f"mods/{MOD_ID}/modcd.ini", "size": len(meta)})
-        for src in mod_files:
+        for mod in mods:
             manifest_files.append({
-                "path": f"mods/{MOD_ID}/{src.name}",
-                "size": src.stat().st_size,
+                "path": f"mods/{mod.mod_id}/modcd.ini",
+                "size": len(mod.meta),
             })
+            for src in mod.files:
+                manifest_files.append({
+                    "path": f"mods/{mod.mod_id}/{src.name}",
+                    "size": src.stat().st_size,
+                })
+
         manifest_files.sort(key=lambda x: str(x["path"]).lower())
         manifest_bytes = json.dumps(
             {"files": manifest_files}, indent=1, ensure_ascii=False
@@ -214,7 +308,8 @@ def main() -> None:
                 rel = n[len(base_game):]
                 if not rel or rel == "manifest.json":
                     continue
-                if rel.lower().startswith(f"mods/{MOD_ID}/"):
+                rel_lower = rel.lower()
+                if any(rel_lower.startswith(f"mods/{m.mod_id}/") for m in mods):
                     continue
                 new_name = shell_game + rel
                 data = zb.read(item.filename)
@@ -230,12 +325,21 @@ def main() -> None:
                 zo.writestr(clone, data)
                 game_total += len(data)
 
-            zo.writestr(bytes_info(shell_game + f"mods/{MOD_ID}/modcd.ini"), meta)
-            mod_total = 0
-            for src in mod_files:
-                data = src.read_bytes()
-                zo.writestr(file_info(shell_game + f"mods/{MOD_ID}/{src.name}", src), data)
-                mod_total += len(data)
+            mod_totals: dict[str, int] = {}
+            for mod in mods:
+                zo.writestr(
+                    bytes_info(shell_game + f"mods/{mod.mod_id}/modcd.ini"),
+                    mod.meta
+                )
+                total = 0
+                for src in mod.files:
+                    data = src.read_bytes()
+                    zo.writestr(
+                        file_info(shell_game + f"mods/{mod.mod_id}/{src.name}", src),
+                        data
+                    )
+                    total += len(data)
+                mod_totals[mod.mod_id] = total
 
             zo.writestr(bytes_info(shell_game + "manifest.json"), manifest_bytes)
 
@@ -244,7 +348,8 @@ def main() -> None:
     print(f"Bundle ID: {a.bundle_id}")
     print(f"WebDist: {web_total / 1024 / 1024:.1f} MB")
     print(f"Base RA2/YR GameRes: {game_total / 1024 / 1024:.1f} MB")
-    print(f"Scorched Earth: {mod_total / 1024 / 1024:.1f} MB")
+    for mod in mods:
+        print(f"{mod.mod_id}: {mod_totals[mod.mod_id] / 1024 / 1024:.1f} MB")
     print(f"IPA: {output.stat().st_size / 1024 / 1024:.1f} MB")
 
 if __name__ == "__main__":
