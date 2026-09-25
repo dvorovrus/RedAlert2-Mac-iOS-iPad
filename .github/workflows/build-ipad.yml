@@ -25,7 +25,7 @@ jobs:
         env:
           RA2_TEAM_ID: ""
           RA2_BUNDLE_ID: com.dvorov.ra2yr
-          RA2_APP_NAME: "Yuri's Revenge"
+          RA2_APP_NAME: "Red Alert 2"
         run: |
           cd ios
           xcodegen generate
