@@ -38,11 +38,11 @@ final class GameViewController: UIViewController, WKNavigationDelegate {
         config.preferences.isElementFullscreenEnabled = true
 
         // Marker the web app uses to detect it is running inside the native shell.
+        // Signing metadata is read from the profile actually embedded by the
+        // sideload/signing tool, so the launcher can show the real expiry time.
+        let shellInfo = Self.shellInfoJSON()
         let bootstrap = WKUserScript(
-            source: """
-            window.__RA2_SHELL__ = { platform: 'ios', version: '0.3.0', \
-            thermalState: '\(Self.thermalStateName(ProcessInfo.processInfo.thermalState))' };
-            """,
+            source: "window.__RA2_SHELL__ = \(shellInfo);",
             injectionTime: .atDocumentStart,
             forMainFrameOnly: true
         )
@@ -78,6 +78,93 @@ final class GameViewController: UIViewController, WKNavigationDelegate {
         }
         lastRecoverableURL = url
         webView.load(URLRequest(url: url))
+    }
+
+    private static func shellInfoJSON() -> String {
+        let payload: [String: Any] = [
+            "platform": "ios",
+            "version": "0.4.0",
+            "thermalState": thermalStateName(ProcessInfo.processInfo.thermalState),
+            "signing": signingProfileInfo(),
+        ]
+
+        guard
+            JSONSerialization.isValidJSONObject(payload),
+            let data = try? JSONSerialization.data(withJSONObject: payload),
+            let json = String(data: data, encoding: .utf8)
+        else {
+            return #"{"platform":"ios","version":"0.4.0","thermalState":"unknown","signing":{"available":false}}"#
+        }
+
+        return json
+    }
+
+    private static func signingProfileInfo() -> [String: Any] {
+        guard
+            let profileURL = Bundle.main.url(
+                forResource: "embedded",
+                withExtension: "mobileprovision"
+            ),
+            let profileData = try? Data(contentsOf: profileURL)
+        else {
+            return ["available": false]
+        }
+
+        // embedded.mobileprovision is a CMS envelope containing an XML plist.
+        // We only need the plist payload and avoid private APIs / external libs.
+        let xmlStartMarker = Data("<?xml".utf8)
+        let plistEndMarker = Data("</plist>".utf8)
+
+        guard
+            let xmlStart = profileData.range(of: xmlStartMarker),
+            let plistEnd = profileData.range(
+                of: plistEndMarker,
+                options: [],
+                in: xmlStart.lowerBound..<profileData.endIndex
+            )
+        else {
+            return ["available": false]
+        }
+
+        let plistData = Data(
+            profileData[xmlStart.lowerBound..<plistEnd.upperBound]
+        )
+
+        guard
+            let object = try? PropertyListSerialization.propertyList(
+                from: plistData,
+                options: [],
+                format: nil
+            ),
+            let plist = object as? [String: Any],
+            let expirationDate = plist["ExpirationDate"] as? Date
+        else {
+            return ["available": false]
+        }
+
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime]
+
+        var result: [String: Any] = [
+            "available": true,
+            "expirationDate": iso.string(from: expirationDate),
+        ]
+
+        if let creationDate = plist["CreationDate"] as? Date {
+            result["creationDate"] = iso.string(from: creationDate)
+        }
+        if let name = plist["Name"] as? String {
+            result["profileName"] = name
+        }
+        if let teamName = plist["TeamName"] as? String {
+            result["teamName"] = teamName
+        }
+        if let teamIDs = plist["TeamIdentifier"] as? [String],
+           let teamID = teamIDs.first {
+            result["teamIdentifier"] = teamID
+        }
+
+        return result
     }
 
     private static func thermalStateName(_ state: ProcessInfo.ThermalState) -> String {
