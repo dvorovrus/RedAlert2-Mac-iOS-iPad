@@ -37,3 +37,11 @@ xcuserdata/
 .idea/
 certs/
 .claude/
+
+# Local All-in-One build assets
+/input/*
+!/input/.gitkeep
+/mods/*
+!/mods/.gitkeep
+/output/*
+!/output/.gitkeep
