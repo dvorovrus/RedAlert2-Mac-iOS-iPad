@@ -10,6 +10,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.10
+
+      - name: Install web dependencies
+        working-directory: redalert2
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck launcher web changes
+        working-directory: redalert2
+        run: bun run typecheck:entry
+
       - name: Install XcodeGen
         run: brew install xcodegen
 
