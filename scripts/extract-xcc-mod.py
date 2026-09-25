@@ -433,15 +433,25 @@ def emit_activation_xmlf_without_string_table(root: dict, out_path: Path) -> Non
     stripped["keys"].pop(9, None)  # ct_st / string-table
 
     body = serialize_key_new(stripped)
+
+    # Eagle Red bundles an old XCC Mod Launcher and its original payload is
+    # XIF version 1. Emit the temporary package in that same legacy format.
+    # Newer XCC accepts v2/fast XIF, but old launchers can reject it with
+    # "Error reading mod."
+    packed = zlib.compress(body, 9)
     header = struct.pack(
-        "<iiiii",
+        "<iii",
         FILE_ID,
-        2,          # file_version_fast
-        0,          # uncompressed body follows directly
-        len(body),  # size_compressed field is body size in this mode
-        0,          # no external section
+        1,          # file_version_new / legacy compressed XIF
+        len(body),  # uncompressed body size
     )
-    out_path.write_bytes(header + body)
+    out_path.write_bytes(header + packed)
+
+    # Validate the exact bytes we just wrote with our parser before the user
+    # hands them to the old launcher.
+    parsed, _ = parse_xif(out_path.read_bytes())
+    if 9 in parsed["keys"]:
+        raise ParseError("Generated activation XIF still contains string-table")
 
 
 def extract_embedded_xif(exe: bytes) -> bytes:
