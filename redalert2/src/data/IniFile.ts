@@ -63,16 +63,30 @@ export class IniFile {
         });
         return newIniFile;
     }
-    public getOrCreateSection(sectionName: string): IniSection {
-        let section = this.sections.get(sectionName);
-        if (!section) {
-            section = new IniSection(sectionName);
-            this.sections.set(sectionName, section);
+    private findSectionKey(sectionName: string): string | undefined {
+        if (this.sections.has(sectionName)) {
+            return sectionName;
         }
+        const normalized = sectionName.toLowerCase();
+        for (const key of this.sections.keys()) {
+            if (key.toLowerCase() === normalized) {
+                return key;
+            }
+        }
+        return undefined;
+    }
+    public getOrCreateSection(sectionName: string): IniSection {
+        const existingKey = this.findSectionKey(sectionName);
+        if (existingKey !== undefined) {
+            return this.sections.get(existingKey)!;
+        }
+        const section = new IniSection(sectionName);
+        this.sections.set(sectionName, section);
         return section;
     }
     public getSection(sectionName: string): IniSection | undefined {
-        return this.sections.get(sectionName);
+        const key = this.findSectionKey(sectionName);
+        return key === undefined ? undefined : this.sections.get(key);
     }
     public getOrderedSections(): IniSection[] {
         return Array.from(this.sections.values());
