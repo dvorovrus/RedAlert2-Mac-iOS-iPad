@@ -11,6 +11,7 @@ import { MenuMpSlotText } from "./MenuMpSlotText";
 import { SidebarPreview } from "./SidebarPreview";
 import { MenuTooltip } from "./MenuTooltip";
 import { VersionString } from "./VersionString";
+import { ModeSplash } from "./ModeSplash";
 import * as THREE from 'three';
 export interface Viewport {
     x: number;
@@ -63,12 +64,17 @@ export class MainMenu extends UiObject {
     private sidebarPreview!: SidebarPreview;
     private menuVideo!: HtmlView;
     private version!: HtmlView;
+    private readonly themeId: string;
     constructor(viewport: Viewport, images: ImageMap, jsxRenderer: JsxRenderer, videoSrc: string) {
         super(new THREE.Object3D(), new HtmlContainer());
         this.viewport = viewport;
         this.images = images;
         this.jsxRenderer = jsxRenderer;
         this.videoSrc = videoSrc;
+        const params = new URLSearchParams(window.location.search);
+        const requestedMod = params.get("mod");
+        const requestedEngine = params.get("engine");
+        this.themeId = requestedMod || (requestedEngine === "yr" ? "yr" : "ra2");
         this.create3DObject();
     }
     get onSidebarToggle() {
@@ -265,7 +271,14 @@ export class MainMenu extends UiObject {
                 props: { src: this.videoSrc },
                 hidden: true,
                 ref: (ref: HtmlView) => (this.menuVideo = ref),
-            })), jsx("container", {
+            }), this.themeId !== "ra2"
+                ? jsx(HtmlView, {
+                    component: ModeSplash,
+                    props: { themeId: this.themeId },
+                    width: mainImage.width,
+                    height: mainImage.height,
+                })
+                : []), jsx("container", {
                 x: 0,
                 y: statusBarY,
                 ref: (ref: UiObject) => (this.statusBar = ref),
