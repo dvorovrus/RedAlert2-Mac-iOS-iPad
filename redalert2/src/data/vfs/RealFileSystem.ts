@@ -25,9 +25,18 @@ export class RealFileSystem {
         this.directories.push(newDir);
         return newDir;
     }
-    addDirectory(dir: RealFileSystemDir): void {
+    addDirectory(dir: RealFileSystemDir, highPriority: boolean = false): void {
         if (!this.directories.includes(dir)) {
-            this.directories.push(dir);
+            // The active mod is an overlay and must win over files with the same
+            // names in the base RA2 directory (rules.ini, art.ini, cache.mix,
+            // audio.bag, etc.). Ordinary auxiliary directories keep the existing
+            // append behavior.
+            if (highPriority) {
+                this.directories.unshift(dir);
+            }
+            else {
+                this.directories.push(dir);
+            }
         }
     }
     async getDirectory(path: string): Promise<RealFileSystemDir> {
