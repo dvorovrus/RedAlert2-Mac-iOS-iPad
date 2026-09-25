@@ -2,6 +2,12 @@ name: Build RA2 iPad Shell
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "ios/Sources/**"
+      - ".github/workflows/build-ipad.yml"
 
 jobs:
   build:
