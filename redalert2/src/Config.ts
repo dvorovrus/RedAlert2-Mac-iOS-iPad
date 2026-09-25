@@ -67,8 +67,16 @@ export class Config {
     get serversUrl(): string {
         return this.generalData.getString("serversUrl", "servers.ini");
     }
-    /** "ra2" (default) or "yr" — which game the engine boots as. */
+    /** "ra2" (default) or "yr" — which game the engine boots as.
+     *  The native iPad launcher may override config.ini via ?engine=ra2|yr.
+     */
     get engine(): string {
+        if (typeof window !== "undefined") {
+            const launchEngine = new URLSearchParams(window.location.search).get("engine");
+            if (launchEngine === "ra2" || launchEngine === "yr") {
+                return launchEngine;
+            }
+        }
         return this.generalData.getString("engine") || "ra2";
     }
     get gameresBaseUrl(): string | undefined {
