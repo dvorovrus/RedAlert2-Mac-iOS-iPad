@@ -7,6 +7,7 @@ import { MessageBoxApi } from '../../../component/MessageBoxApi';
 import { FullScreen } from '../../../FullScreen';
 import { getHumanReadableKey } from '@/gui/screen/options/component/getHumanReadableKey';
 import { isNativeShell } from '@/shell/iosSeed';
+import { Engine } from '@/engine/Engine';
 interface SidebarButton {
     label: string;
     tooltip?: string;
@@ -161,7 +162,7 @@ export class HomeScreen implements Screen {
             this.controller.setSidebarButtons(buttons);
             this.controller.showSidebarButtons();
             this.controller.toggleMainVideo(true);
-            this.controller.showVersion(this.appVersion);
+            this.controller.showVersion(this.getVersionLabel());
         }
     }
     async onLeave(): Promise<void> {
@@ -181,6 +182,25 @@ export class HomeScreen implements Screen {
     }
     destroy(): void {
     }
+    private getVersionLabel(): string {
+        const activeMod = Engine.getActiveMod();
+        if (!activeMod) {
+            return this.appVersion;
+        }
+
+        const modLabels: Record<string, string> = {
+            "eagle-red": "Eagle Red 1.45",
+            "moomans-rules-ra2": "MooMan's Rules 3.0 RA2",
+            "moomans-rules-yr": "MooMan's Rules 3.0 YR",
+            "scorched-earth": "Scorched Earth",
+        };
+
+        const fallback = activeMod
+            .replace(/[-_]+/g, " ")
+            .replace(/\b\w/g, (char) => char.toUpperCase());
+        return `${this.appVersion} · ${modLabels[activeMod] ?? fallback}`;
+    }
+
     private async toggleFullscreen(): Promise<void> {
         try {
             if (this.fullScreen?.isAvailable()) {
