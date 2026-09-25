@@ -27,6 +27,11 @@ from pathlib import Path
 
 FILE_ID = 0x1A464958  # b"XIF\x1a" little-endian
 
+CSF_FILE_ID = 0x43534620       # 'CSF '
+CSF_LABEL_ID = 0x4C424C20      # 'LBL '
+CSF_STRING_ID = 0x53545220     # 'STR '
+CSF_STRING_W_ID = 0x53545257   # 'STRW'
+
 VT_BIN32 = 0
 VT_BINARY = 1
 VT_INT32 = 2
@@ -471,6 +476,137 @@ def emit_activation_xmlfs(root: dict, main_out: Path, csf_out: Path) -> None:
         raise ParseError("Generated CSF activation XIF has no string-table")
 
 
+def parse_csf(data: bytes) -> tuple[dict[str, tuple[bytes, bytes | None]], dict]:
+    if len(data) < 24:
+        raise ParseError("CSF is too small")
+
+    file_id, flags1, count1, count2, zero, flags2 = struct.unpack_from("<6i", data, 0)
+    if (file_id & 0xFFFFFFFF) != CSF_FILE_ID:
+        raise ParseError(
+            f"Bad CSF id: 0x{file_id & 0xffffffff:08x}; "
+            f"expected 0x{CSF_FILE_ID:08x}"
+        )
+
+    pos = 24
+    entries: dict[str, tuple[bytes, bytes | None]] = {}
+
+    def need(n: int) -> None:
+        nonlocal pos
+        if pos + n > len(data):
+            raise ParseError(
+                f"Unexpected EOF in CSF at 0x{pos:x}: need {n}, "
+                f"have {len(data) - pos}"
+            )
+
+    def read_i32() -> int:
+        nonlocal pos
+        need(4)
+        value = struct.unpack_from("<i", data, pos)[0]
+        pos += 4
+        return value
+
+    for _ in range(count1):
+        label_id = read_i32() & 0xFFFFFFFF
+        if label_id != CSF_LABEL_ID:
+            raise ParseError(
+                f"Bad CSF label id 0x{label_id:08x} at 0x{pos - 4:x}"
+            )
+
+        flags = read_i32()
+        name_len = read_i32()
+        if name_len < 0:
+            raise ParseError(f"Negative CSF label length: {name_len}")
+        need(name_len)
+        name = data[pos:pos + name_len].decode("latin1").lower()
+        pos += name_len
+
+        if flags & 1:
+            string_id = read_i32() & 0xFFFFFFFF
+            if string_id not in (CSF_STRING_ID, CSF_STRING_W_ID):
+                raise ParseError(
+                    f"Bad CSF string id 0x{string_id:08x} for {name!r}"
+                )
+
+            wchar_count = read_i32()
+            if wchar_count < 0:
+                raise ParseError(f"Negative CSF wchar count: {wchar_count}")
+            byte_count = wchar_count * 2
+            need(byte_count)
+            value_raw = data[pos:pos + byte_count]
+            pos += byte_count
+
+            extra_raw = None
+            if string_id == CSF_STRING_W_ID:
+                extra_len = read_i32()
+                if extra_len < 0:
+                    raise ParseError(f"Negative CSF extra length: {extra_len}")
+                need(extra_len)
+                extra_raw = data[pos:pos + extra_len]
+                pos += extra_len
+
+            entries[name] = (value_raw, extra_raw)
+        else:
+            entries[name] = (b"", None)
+
+    if pos != len(data):
+        raise ParseError(
+            f"CSF trailing data: parsed {pos} bytes, file has {len(data)}"
+        )
+
+    return entries, {
+        "flags1": flags1,
+        "count1": count1,
+        "count2": count2,
+        "zero": zero,
+        "flags2": flags2,
+    }
+
+
+def write_csf(entries: dict[str, tuple[bytes, bytes | None]]) -> bytes:
+    out = bytearray()
+    count = len(entries)
+    out += struct.pack("<6i", CSF_FILE_ID, 3, count, count, 0, 0)
+
+    for name in sorted(entries):
+        value_raw, extra_raw = entries[name]
+        name_raw = name.encode("latin1")
+
+        out += struct.pack("<ii", CSF_LABEL_ID, 1)
+        out += struct.pack("<i", len(name_raw))
+        out += name_raw
+
+        string_id = CSF_STRING_W_ID if extra_raw is not None else CSF_STRING_ID
+        out += struct.pack("<i", string_id)
+
+        if len(value_raw) % 2:
+            raise ParseError(f"Odd UTF-16 payload length for CSF label {name!r}")
+        out += struct.pack("<i", len(value_raw) // 2)
+        out += value_raw
+
+        if extra_raw is not None:
+            out += struct.pack("<i", len(extra_raw))
+            out += extra_raw
+
+    return bytes(out)
+
+
+def merge_csf(base_path: Path, diff_path: Path, out_path: Path) -> tuple[int, int, int]:
+    base_entries, _ = parse_csf(base_path.read_bytes())
+    diff_entries, _ = parse_csf(diff_path.read_bytes())
+
+    merged = dict(base_entries)
+    merged.update(diff_entries)
+    out_path.write_bytes(write_csf(merged))
+
+    check, _ = parse_csf(out_path.read_bytes())
+    if len(check) != len(merged):
+        raise ParseError("Generated merged CSF failed validation")
+
+    added = sum(1 for key in diff_entries if key not in base_entries)
+    replaced = len(diff_entries) - added
+    return len(base_entries), added, replaced
+
+
 def extract_embedded_xif(exe: bytes) -> bytes:
     if len(exe) < 12:
         raise ParseError("EXE is too small")
@@ -497,6 +633,15 @@ def main() -> int:
         type=Path,
         default=None,
         help="Output directory (default: <exe-dir>/xcc-extracted)",
+    )
+    ap.add_argument(
+        "--base-csf",
+        type=Path,
+        default=None,
+        help=(
+            "Optional base RA2 CSF to merge with the embedded XCC CSF diff. "
+            "For this project use redalert2/public/general.csf."
+        ),
     )
     args = ap.parse_args()
 
@@ -584,6 +729,22 @@ def main() -> int:
     activation_csf_xmlf = out / "activation-string-table-only.xmlf"
     emit_activation_xmlfs(root, activation_xmlf, activation_csf_xmlf)
 
+    merged_csf = None
+    csf_merge_stats = None
+    if args.base_csf is not None:
+        base_csf = args.base_csf.resolve()
+        if not base_csf.is_file():
+            raise ParseError(f"Base CSF not found: {base_csf}")
+
+        diff_csf = raw_root / "string-table" / "ra2.csf"
+        if not diff_csf.is_file():
+            raise ParseError(
+                f"Embedded RA2 CSF diff not found after extraction: {diff_csf}"
+            )
+
+        merged_csf = out / "merged-ra2.csf"
+        csf_merge_stats = merge_csf(base_csf, diff_csf, merged_csf)
+
     category_counts = Counter(x["category"] for x in inventory)
     encoding_counts = Counter(x["encoding"] for x in inventory)
 
@@ -598,6 +759,13 @@ def main() -> int:
     print(f"Files:       {len(inventory)}")
     print(f"Activation:  {activation_xmlf}")
     print(f"CSF pass:    {activation_csf_xmlf}")
+    if merged_csf is not None and csf_merge_stats is not None:
+        base_count, added_count, replaced_count = csf_merge_stats
+        print(f"Merged CSF:  {merged_csf}")
+        print(
+            f"CSF merge:   base={base_count}, "
+            f"added={added_count}, replaced={replaced_count}"
+        )
     print()
     print("Categories:")
     for name, count in sorted(category_counts.items()):
