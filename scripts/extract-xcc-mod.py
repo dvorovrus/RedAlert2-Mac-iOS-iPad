@@ -372,6 +372,77 @@ def safe_name(name: str) -> str:
     return name
 
 
+def serialize_value_new(value: dict) -> bytes:
+    vt = value.get("type", VT_BINARY)
+
+    # Normalize external payloads to ordinary inline binary. XCC supports that
+    # and it lets us emit a self-contained v2 XMLF without a separate external
+    # data section.
+    if vt == VT_EXTERNAL_BINARY:
+        vt = VT_BINARY
+
+    out = bytearray()
+    out.append(vt & 0xFF)
+
+    if vt == VT_BIN32:
+        out += struct.pack("<I", int(value.get("int", 0)) & 0xFFFFFFFF)
+    elif vt == VT_INT32:
+        out += struct.pack("<i", int(value.get("int", 0)))
+    elif vt == VT_FLOAT:
+        out += struct.pack("<f", float(value.get("float", 0.0)))
+    else:
+        raw = value_bytes(value) or b""
+        out += struct.pack("<i", len(raw))
+        out += raw
+
+    return bytes(out)
+
+
+def serialize_key_new(node: dict) -> bytes:
+    out = bytearray()
+
+    keys = sorted(node["keys"].items())
+    out += struct.pack("<i", len(keys))
+    prev = 0
+    for kid, child in keys:
+        out += struct.pack("<i", kid - prev)
+        prev = kid
+        out += serialize_key_new(child)
+
+    values = sorted(node["values"].items())
+    out += struct.pack("<i", len(values))
+    prev = 0
+    for vid, value in values:
+        out += struct.pack("<i", vid - prev)
+        prev = vid
+        out += serialize_value_new(value)
+
+    return bytes(out)
+
+
+def emit_activation_xmlf_without_string_table(root: dict, out_path: Path) -> None:
+    # XCC processes the string-table category after sounds and before VXLs.
+    # Old RA2 distributions sometimes make the CSF diff step fail, which
+    # aborts activation before expand/ecache MIX files are written.  Emit a
+    # temporary activation package with only category 9 removed; all gameplay
+    # INIs, SHP/HVA/VXL assets, screens, interface and sounds remain intact.
+    import copy
+
+    stripped = copy.deepcopy(root)
+    stripped["keys"].pop(9, None)  # ct_st / string-table
+
+    body = serialize_key_new(stripped)
+    header = struct.pack(
+        "<iiiii",
+        FILE_ID,
+        2,          # file_version_fast
+        0,          # uncompressed body follows directly
+        len(body),  # size_compressed field is body size in this mode
+        0,          # no external section
+    )
+    out_path.write_bytes(header + body)
+
+
 def extract_embedded_xif(exe: bytes) -> bytes:
     if len(exe) < 12:
         raise ParseError("EXE is too small")
@@ -479,6 +550,9 @@ def main() -> int:
         encoding="utf-8",
     )
 
+    activation_xmlf = out / "activation-no-string-table.xmlf"
+    emit_activation_xmlf_without_string_table(root, activation_xmlf)
+
     category_counts = Counter(x["category"] for x in inventory)
     encoding_counts = Counter(x["encoding"] for x in inventory)
 
@@ -491,6 +565,7 @@ def main() -> int:
     print(f"Game ID:     {meta['game']}")
     print(f"MFS:         {meta['mod_mfs'] or '(default 98)'}")
     print(f"Files:       {len(inventory)}")
+    print(f"Activation:  {activation_xmlf}")
     print()
     print("Categories:")
     for name, count in sorted(category_counts.items()):
