@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Red Alert Collection</title>
+<style>
+:root{--yellow:#fff300}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;background:#050505;overflow:hidden}
+body{font-family:Arial,Helvetica,sans-serif;color:white;background:radial-gradient(circle at 30% 50%,rgba(130,0,0,.18),transparent 35%),linear-gradient(#070707,#000)}
+.scan{position:fixed;inset:0;pointer-events:none;opacity:.2;background:repeating-linear-gradient(180deg,transparent 0 3px,rgba(255,255,255,.02) 3px 4px)}
+.frame{width:min(1180px,94vw);height:min(690px,92vh);margin:4vh auto;display:grid;grid-template-columns:1fr 320px;border:5px solid #1e1e1e;border-radius:7px;background:#111;box-shadow:0 20px 70px #000,inset 0 0 0 1px #d8d8d8;overflow:hidden}
+.screen-wrap{position:relative;padding:14px;background:linear-gradient(90deg,#777 0,#c8c8c8 7%,#565656 14%,#9d9d9d 23%,#464646 31%,#b5b5b5 42%,#686868 53%,#bfbfbf 62%,#545454 73%,#9f9f9f 83%,#4f4f4f 92%,#aaa 100%)}
+.screen-bezel{height:100%;border-radius:42px 42px 18px 18px;padding:16px;background:linear-gradient(145deg,#1d1d1d,#0b0b0b 48%,#2b2b2b);box-shadow:inset 0 0 0 3px #151515,inset 0 0 28px #000,0 0 0 2px #858585}
+.screen{position:relative;height:100%;border-radius:34px;overflow:hidden;background:#120202;box-shadow:inset 0 0 70px #000}
+.hero{position:absolute;inset:0;background-size:cover;background-position:center;transition:opacity .25s ease,transform .45s ease;transform:scale(1.02)}
+.hero:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.05),rgba(0,0,0,.18)),linear-gradient(0deg,rgba(0,0,0,.84),transparent 46%)}
+.hero:before{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;background:repeating-linear-gradient(180deg,rgba(255,255,255,.025) 0 2px,rgba(0,0,0,.03) 2px 4px)}
+.screen-copy{position:absolute;left:32px;right:32px;bottom:28px;z-index:5;text-shadow:0 2px 7px #000}
+.kicker{display:inline-block;padding:4px 8px;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;background:#050505cc;border:1px solid #ffffff22;color:#f0d074;margin-bottom:8px}
+.screen-copy h1{margin:0;font-size:42px;line-height:.95;text-transform:uppercase;font-weight:900;letter-spacing:-.03em}
+.screen-copy p{margin:9px 0 0;color:#ddd6c6;font-size:14px;max-width:620px}
+.corner{position:absolute;z-index:7;top:18px;left:20px;font:700 11px "Courier New",monospace;color:#fff000;text-shadow:0 0 6px #8d7600}
+.tactical{position:absolute;top:18px;right:20px;z-index:8;width:250px;background:rgba(0,0,0,.66);border:1px solid rgba(255,243,0,.35);box-shadow:0 0 14px rgba(125,88,0,.24),inset 0 0 0 1px rgba(255,255,255,.06);padding:10px 12px;font-family:"Courier New",monospace}
+.tactical-title{color:var(--yellow);font-size:12px;font-weight:700;margin-bottom:8px;letter-spacing:.08em}
+.t-row{display:flex;justify-content:space-between;gap:10px;font-size:11px;color:#d8d0b2;padding:3px 0;border-top:1px solid rgba(255,255,255,.06)}
+.t-row:first-of-type{border-top:none}
+.t-row b{color:#fff6a0;font-weight:700;text-align:right}
+.panel{background:linear-gradient(90deg,#777 0,#c8c8c8 7%,#565656 14%,#9d9d9d 23%,#464646 31%,#b5b5b5 42%,#686868 53%,#bfbfbf 62%,#545454 73%,#9f9f9f 83%,#4f4f4f 92%,#aaa 100%);border-left:3px solid #222;padding:12px 12px 15px;display:flex;flex-direction:column}
+.menu-title{background:#060606;border:2px solid #222;color:var(--yellow);text-align:center;font-size:16px;font-weight:900;padding:11px 6px;margin-bottom:12px;box-shadow:inset 0 0 0 1px #777}
+.choice{border:0;width:100%;min-height:74px;margin-bottom:10px;color:#fff20b;text-shadow:0 2px 2px #400;font:900 18px Arial,sans-serif;cursor:pointer;background:linear-gradient(180deg,#ea321c 0,#a00b07 20%,#6e0000 55%,#b8120b 83%,#5b0000 100%);box-shadow:inset 0 0 0 2px #430000,inset 0 0 0 4px #cb382b,0 2px 0 #262626,0 0 0 2px #3b3b3b;transition:filter .12s ease,transform .08s ease}
+.choice small{display:block;margin-top:3px;font-size:10px;color:#f6c97b;letter-spacing:.08em;text-transform:uppercase}
+.choice:hover{filter:brightness(1.18)}
+.choice:active{transform:translateY(1px)}
+.choice.active{filter:brightness(1.28);box-shadow:inset 0 0 0 2px #5e0000,inset 0 0 0 4px #ff5037,0 0 16px #b3110e88,0 0 0 2px #3b3b3b}
+.launch{margin-top:auto;min-height:62px;border:0;cursor:pointer;color:#fff20b;font:900 20px Arial,sans-serif;text-shadow:0 2px 2px #400;background:linear-gradient(#d42114,#790000 52%,#b6160d);box-shadow:inset 0 0 0 3px #ef4d38,0 0 0 2px #202020}
+.launch:hover{filter:brightness(1.15)}
+.helper{margin-top:10px;text-align:right;color:#d8ef19;font-weight:800;font-size:12px;text-shadow:0 1px 2px #000}
+.sound-toggle{position:fixed;right:18px;bottom:18px;z-index:60;border:1px solid #6d6500;background:#080808e8;color:#fff300;padding:9px 12px;font:700 11px "Courier New",monospace;cursor:pointer;box-shadow:0 0 12px #000}
+@media(max-width:900px){.frame{grid-template-columns:1fr 270px}.choice{font-size:15px}.screen-copy h1{font-size:32px}.tactical{width:220px}}
+</style>
+</head>
+<body>
+<div class="scan"></div>
+<div class="frame">
+<section class="screen-wrap"><div class="screen-bezel"><div class="screen">
+<div class="hero" id="hero"></div>
+<div class="corner">WESTWOOD TACTICAL INTERFACE // RA2</div>
+<div class="tactical">
+<div class="tactical-title">TACTICAL DATA</div>
+<div class="t-row"><span>MODE</span><b id="tMode">RA2</b></div>
+<div class="t-row"><span>CLASS</span><b id="tClass">ORIGINAL</b></div>
+<div class="t-row"><span>ROUTE</span><b id="tRoute">engine=ra2</b></div>
+</div>
+<div class="screen-copy"><div class="kicker" id="kicker">ORIGINAL CAMPAIGN</div><h1 id="name">RED ALERT 2</h1><p id="desc">Classic Red Alert 2 with the original factions, maps, and balance.</p></div>
+</div></div></section>
+<aside class="panel">
+<div class="menu-title">MAIN MENU</div>
+<button class="choice active" data-index="0">RED ALERT 2<small>Classic</small></button>
+<button class="choice" data-index="1">YURI'S REVENGE<small>Expansion</small></button>
+<button class="choice" data-index="2">SCORCHED EARTH<small>RA2 Mod</small></button>
+<button class="launch" id="launch">LAUNCH</button>
+<div class="helper">ONE APP // THREE MODES</div>
+</aside>
+</div>
+<button class="sound-toggle" id="soundToggle">SOUND: ON</button>
+<script>
+const games=[
+{name:"RED ALERT 2",short:"RA2",kind:"ORIGINAL",kicker:"ORIGINAL CAMPAIGN",desc:"Classic Red Alert 2 with the original factions, maps, and balance.",route:"index.html?engine=ra2",routeLabel:"engine=ra2",image:"launcher-assets/ra2.jpg"},
+{name:"YURI'S REVENGE",short:"YR",kind:"EXPANSION",kicker:"EXPANSION",desc:"The Yuri's Revenge expansion with Yuri's army and expanded content.",route:"index.html?engine=yr",routeLabel:"engine=yr",image:"launcher-assets/yuri.jpg"},
+{name:"SCORCHED EARTH",short:"SE",kind:"MOD",kicker:"RA2 MOD",desc:"Scorched Earth is a large-scale RA2 overhaul with new units, balance, maps, and environments.",route:"index.html?engine=ra2&mod=scorched-earth",routeLabel:"engine=ra2&mod=scorched-earth",image:"launcher-assets/scorched.jpg"}];
+const hero=document.getElementById("hero"),nameEl=document.getElementById("name"),kicker=document.getElementById("kicker"),desc=document.getElementById("desc"),buttons=[...document.querySelectorAll(".choice")],tMode=document.getElementById("tMode"),tClass=document.getElementById("tClass"),tRoute=document.getElementById("tRoute");
+let current=0,audioCtx=null,master=null,musicBus=null,sfxBus=null,soundEnabled=localStorage.getItem("launcherSound")!=="off",musicStarted=false,musicTimer=null;
+document.getElementById("soundToggle").textContent="SOUND: "+(soundEnabled?"ON":"OFF");
+function ensureAudio(){if(!soundEnabled)return false;if(!audioCtx){audioCtx=new(window.AudioContext||window.webkitAudioContext)();master=audioCtx.createGain();master.gain.value=.72;master.connect(audioCtx.destination);musicBus=audioCtx.createGain();musicBus.gain.value=.22;musicBus.connect(master);sfxBus=audioCtx.createGain();sfxBus.gain.value=.55;sfxBus.connect(master)}if(audioCtx.state==="suspended")audioCtx.resume();if(!musicStarted)startMusic();return true}
+function tone(freq,dur=.08,type="square",vol=.08,when=0,dest=null){if(!audioCtx||!soundEnabled)return;const t=audioCtx.currentTime+when,o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0002,vol),t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g);g.connect(dest||sfxBus);o.start(t);o.stop(t+dur+.03)}
+function noiseBurst(dur=.05,vol=.035,when=0){if(!audioCtx||!soundEnabled)return;const sr=audioCtx.sampleRate,b=audioCtx.createBuffer(1,Math.ceil(sr*dur),sr),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*(1-i/d.length);const s=audioCtx.createBufferSource(),f=audioCtx.createBiquadFilter(),g=audioCtx.createGain();f.type="bandpass";f.frequency.value=1800;f.Q.value=.8;g.gain.value=vol;s.buffer=b;s.connect(f);f.connect(g);g.connect(sfxBus);s.start(audioCtx.currentTime+when)}
+function hoverSound(){if(!ensureAudio())return;tone(760,.045,"square",.035);tone(980,.035,"square",.022,.035)}
+function selectSound(){if(!ensureAudio())return;noiseBurst(.045,.025);tone(180,.09,"sawtooth",.07);tone(360,.07,"square",.04,.035)}
+function launchSound(){if(!ensureAudio())return;noiseBurst(.09,.045);tone(120,.22,"sawtooth",.09);tone(240,.18,"square",.06,.05);tone(480,.15,"square",.045,.12);tone(720,.16,"square",.035,.20)}
+function startMusic(){if(!audioCtx||musicStarted||!soundEnabled)return;musicStarted=true;const d1=audioCtx.createOscillator(),d2=audioCtx.createOscillator(),g=audioCtx.createGain(),lp=audioCtx.createBiquadFilter();d1.type="sawtooth";d2.type="triangle";d1.frequency.value=55;d2.frequency.value=82.5;lp.type="lowpass";lp.frequency.value=260;g.gain.value=.028;d1.connect(lp);d2.connect(lp);lp.connect(g);g.connect(musicBus);d1.start();d2.start();const seq=[110,0,165,0,110,220,0,165];let step=0;musicTimer=setInterval(()=>{if(!audioCtx||!soundEnabled)return;const f=seq[step++%seq.length];if(f)tone(f,.14,"square",.018,0,musicBus)},330)}
+function setGame(i,play=true){current=i;const g=games[i];buttons.forEach((b,n)=>b.classList.toggle("active",n===i));if(play)selectSound();hero.style.opacity="0";setTimeout(()=>{hero.style.backgroundImage='url("'+g.image+'")';nameEl.textContent=g.name;kicker.textContent=g.kicker;desc.textContent=g.desc;tMode.textContent=g.short;tClass.textContent=g.kind;tRoute.textContent=g.routeLabel;hero.style.opacity="1"},100)}
+buttons.forEach((b,i)=>{b.addEventListener("mouseenter",hoverSound);b.addEventListener("click",()=>setGame(i,true))});
+document.getElementById("launch").addEventListener("mouseenter",hoverSound);
+document.getElementById("launch").onclick=()=>{ensureAudio();launchSound();const target=games[current].route;setTimeout(()=>{window.location.href=target},240)};
+document.getElementById("soundToggle").onclick=()=>{if(!audioCtx&&soundEnabled)ensureAudio();soundEnabled=!soundEnabled;localStorage.setItem("launcherSound",soundEnabled?"on":"off");document.getElementById("soundToggle").textContent="SOUND: "+(soundEnabled?"ON":"OFF");if(audioCtx&&master)master.gain.setTargetAtTime(soundEnabled?.72:0,audioCtx.currentTime,.03);if(soundEnabled)ensureAudio()};
+window.addEventListener("pointerdown",()=>ensureAudio(),{once:true});
+setGame(0,false);
+</script>
+</body>
+</html>
