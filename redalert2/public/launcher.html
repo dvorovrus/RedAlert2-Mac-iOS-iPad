@@ -59,7 +59,7 @@ body{font-family:Arial,Helvetica,sans-serif;color:white;background:radial-gradie
 <div class="menu-title">MAIN MENU</div>
 <div class="choices" id="choices"></div>
 <button class="launch" id="launch">LAUNCH</button>
-<div class="helper">ONE APP // THREE MODES</div>
+<div class="helper" id="helper">ONE APP // 2 MODES</div>
 </aside>
 </div>
 <button class="sound-toggle" id="soundToggle">SOUND: ON</button>
@@ -123,6 +123,8 @@ function renderChoices(){
     choices.appendChild(b);
     return b;
   });
+  const helperEl=document.getElementById("helper");
+  if(helperEl)helperEl.textContent="ONE APP // "+games.length+" MODES";
 }
 let current=0,audioCtx=null,master=null,musicBus=null,sfxBus=null,soundEnabled=localStorage.getItem("launcherSound")!=="off",musicStarted=false,musicTimer=null;
 document.getElementById("soundToggle").textContent="SOUND: "+(soundEnabled?"ON":"OFF");
@@ -146,7 +148,15 @@ document.addEventListener("gestureend",e=>e.preventDefault(),{passive:false});
 let lastTouchEnd=0;
 document.addEventListener("touchend",e=>{const now=Date.now();if(now-lastTouchEnd<=300)e.preventDefault();lastTouchEnd=now},{passive:false});
 window.addEventListener("pointerdown",()=>ensureAudio(),{once:true});
-(async()=>{await discoverBundledMods();renderChoices();setGame(0,false)})();
+// Render RA2/YR immediately. Mod discovery is asynchronous and must never leave
+// the menu blank if the custom-scheme manifest fetch is slow on WKWebView.
+renderChoices();
+setGame(0,false);
+discoverBundledMods().then(()=>{
+  renderChoices();
+  if(current>=games.length)current=0;
+  setGame(current,false);
+});
 </script>
 </body>
 </html>
