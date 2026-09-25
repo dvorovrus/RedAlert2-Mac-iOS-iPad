@@ -2,7 +2,45 @@ import UIKit
 import WebKit
 
 final class GameViewController: UIViewController, WKNavigationDelegate {
+    private enum LaunchMode {
+        case redAlert2
+        case yurisRevenge
+        case scorchedEarth
+
+        var title: String {
+            switch self {
+            case .redAlert2: return "Red Alert 2"
+            case .yurisRevenge: return "Yuri's Revenge"
+            case .scorchedEarth: return "Scorched Earth"
+            }
+        }
+
+        var subtitle: String {
+            switch self {
+            case .redAlert2: return "Classic RA2"
+            case .yurisRevenge: return "Expansion"
+            case .scorchedEarth: return "RA2 Mod"
+            }
+        }
+
+        var engine: String {
+            switch self {
+            case .redAlert2, .scorchedEarth: return "ra2"
+            case .yurisRevenge: return "yr"
+            }
+        }
+
+        var modId: String? {
+            switch self {
+            case .scorchedEarth: return "scorched-earth"
+            case .redAlert2, .yurisRevenge: return nil
+            }
+        }
+    }
+
     private var webView: WKWebView!
+    private var launcherView: UIView?
+    private var activeLaunchMode: LaunchMode?
     private var contentProcessCrashCount = 0
     /// Monotonic clock, so a device-clock change cannot confuse the loop check.
     private var lastCrashTime: CFTimeInterval = 0
@@ -24,6 +62,111 @@ final class GameViewController: UIViewController, WKNavigationDelegate {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .black
+        showLauncher()
+    }
+
+    private func showLauncher() {
+        launcherView?.removeFromSuperview()
+
+        let container = UIView()
+        container.translatesAutoresizingMaskIntoConstraints = false
+        container.backgroundColor = UIColor(red: 0.035, green: 0.035, blue: 0.04, alpha: 1.0)
+        view.addSubview(container)
+        NSLayoutConstraint.activate([
+            container.topAnchor.constraint(equalTo: view.topAnchor),
+            container.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            container.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            container.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+        ])
+        launcherView = container
+
+        let eyebrow = UILabel()
+        eyebrow.text = "COMMAND & CONQUER"
+        eyebrow.textColor = UIColor(white: 0.58, alpha: 1)
+        eyebrow.font = .systemFont(ofSize: 13, weight: .semibold)
+        eyebrow.textAlignment = .center
+
+        let title = UILabel()
+        title.text = "RED ALERT 2"
+        title.textColor = .white
+        title.font = .systemFont(ofSize: 34, weight: .black)
+        title.textAlignment = .center
+
+        let subtitle = UILabel()
+        subtitle.text = "Choose game"
+        subtitle.textColor = UIColor(white: 0.68, alpha: 1)
+        subtitle.font = .systemFont(ofSize: 15, weight: .regular)
+        subtitle.textAlignment = .center
+
+        let header = UIStackView(arrangedSubviews: [eyebrow, title, subtitle])
+        header.axis = .vertical
+        header.alignment = .fill
+        header.spacing = 6
+
+        let buttons = UIStackView()
+        buttons.axis = .vertical
+        buttons.alignment = .fill
+        buttons.spacing = 12
+
+        for mode in [LaunchMode.redAlert2, .yurisRevenge, .scorchedEarth] {
+            buttons.addArrangedSubview(makeLauncherButton(for: mode))
+        }
+
+        let footnote = UILabel()
+        footnote.text = "One app · one sideload slot"
+        footnote.textColor = UIColor(white: 0.42, alpha: 1)
+        footnote.font = .systemFont(ofSize: 12, weight: .regular)
+        footnote.textAlignment = .center
+
+        let stack = UIStackView(arrangedSubviews: [header, buttons, footnote])
+        stack.axis = .vertical
+        stack.alignment = .fill
+        stack.spacing = 24
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(stack)
+
+        NSLayoutConstraint.activate([
+            stack.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            stack.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            stack.widthAnchor.constraint(equalTo: container.widthAnchor, multiplier: 0.48),
+            stack.widthAnchor.constraint(lessThanOrEqualToConstant: 520),
+        ])
+    }
+
+    private func makeLauncherButton(for mode: LaunchMode) -> UIButton {
+        var config = UIButton.Configuration.filled()
+        config.title = mode.title
+        config.subtitle = mode.subtitle
+        config.baseForegroundColor = .white
+        config.baseBackgroundColor = UIColor(red: 0.44, green: 0.06, blue: 0.07, alpha: 1.0)
+        config.cornerStyle = .medium
+        config.contentInsets = NSDirectionalEdgeInsets(top: 14, leading: 18, bottom: 14, trailing: 18)
+        config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+            var outgoing = incoming
+            outgoing.font = .systemFont(ofSize: 18, weight: .bold)
+            return outgoing
+        }
+        config.subtitleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+            var outgoing = incoming
+            outgoing.font = .systemFont(ofSize: 12, weight: .medium)
+            outgoing.foregroundColor = UIColor(white: 0.82, alpha: 1)
+            return outgoing
+        }
+
+        let button = UIButton(configuration: config, primaryAction: UIAction { [weak self] _ in
+            self?.startGame(mode)
+        })
+        button.heightAnchor.constraint(greaterThanOrEqualToConstant: 64).isActive = true
+        return button
+    }
+
+    private func startGame(_ mode: LaunchMode) {
+        activeLaunchMode = mode
+        contentProcessCrashCount = 0
+        crashNotice?.removeFromSuperview()
+        crashNotice = nil
+        launcherView?.removeFromSuperview()
+        launcherView = nil
 
         let config = WKWebViewConfiguration()
         config.setURLSchemeHandler(BundleSchemeHandler(), forURLScheme: BundleSchemeHandler.scheme)
@@ -32,12 +175,9 @@ final class GameViewController: UIViewController, WKNavigationDelegate {
         config.preferences.isElementFullscreenEnabled = true
 
         // Marker the web app uses to detect it is running inside the native shell.
-        // thermalState is the only ground truth the page has for "is this device
-        // getting hot" — JavaScript cannot see the SoC's power state, and timing
-        // heuristics cannot tell throttling apart from a heavy frame.
         let bootstrap = WKUserScript(
             source: """
-            window.__RA2_SHELL__ = { platform: 'ios', version: '0.1.0', \
+            window.__RA2_SHELL__ = { platform: 'ios', version: '0.2.0', \
             thermalState: '\(Self.thermalStateName(ProcessInfo.processInfo.thermalState))' };
             """,
             injectionTime: .atDocumentStart,
@@ -47,8 +187,6 @@ final class GameViewController: UIViewController, WKNavigationDelegate {
 
         webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = self
-        // Opaque: the page always paints a black background, and transparency
-        // costs alpha compositing on the full-screen GPU-process surface.
         webView.isOpaque = true
         webView.backgroundColor = .black
         webView.scrollView.isScrollEnabled = false
@@ -60,7 +198,7 @@ final class GameViewController: UIViewController, WKNavigationDelegate {
         }
         #endif
 
-        view.addSubview(webView)
+        view.insertSubview(webView, at: 0)
         webView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             webView.topAnchor.constraint(equalTo: view.topAnchor),
@@ -86,6 +224,8 @@ final class GameViewController: UIViewController, WKNavigationDelegate {
     /// Fires only on thermal / power-mode transitions — a handful of times per
     /// hour at worst — so it adds no polling and no wakeup source of its own.
     private func observeThermalState() {
+        guard thermalObserver == nil, lowPowerObserver == nil else { return }
+
         let center = NotificationCenter.default
         thermalObserver = center.addObserver(
             forName: ProcessInfo.thermalStateDidChangeNotification,
@@ -107,6 +247,8 @@ final class GameViewController: UIViewController, WKNavigationDelegate {
     /// reload (crash recovery, or the post-seed reload) would otherwise see a
     /// stale — and optimistically low — value: no transition fires at reload time.
     private func pushThermalState() {
+        guard webView != nil else { return }
+
         let info = ProcessInfo.processInfo
         let name = Self.thermalStateName(info.thermalState)
         let lowPower = info.isLowPowerModeEnabled
@@ -131,20 +273,40 @@ final class GameViewController: UIViewController, WKNavigationDelegate {
     }
 
     private func loadApp(crashed: Bool = false) {
-        var urlString = "\(BundleSchemeHandler.scheme)://app/index.html"
-        if crashed {
-            // Let the web app know this boot follows a content-process kill so it
-            // can surface it (memory pressure) instead of looking like a silent reset.
-            urlString += "?crashRecovery=\(contentProcessCrashCount)"
+        guard let mode = activeLaunchMode else {
+            showLauncher()
+            return
         }
-        webView.load(URLRequest(url: URL(string: urlString)!))
+
+        var components = URLComponents()
+        components.scheme = BundleSchemeHandler.scheme
+        components.host = "app"
+        components.path = "/index.html"
+
+        var queryItems = [
+            URLQueryItem(name: "engine", value: mode.engine),
+        ]
+        if let modId = mode.modId {
+            queryItems.append(URLQueryItem(name: "mod", value: modId))
+        }
+        if crashed {
+            queryItems.append(
+                URLQueryItem(name: "crashRecovery", value: String(contentProcessCrashCount))
+            )
+        }
+        components.queryItems = queryItems
+
+        guard let url = components.url else {
+            NSLog("[RA2] Failed to construct launcher URL for %@", mode.title)
+            return
+        }
+        NSLog("[RA2] Launching %@: %@", mode.title, url.absoluteString)
+        webView.load(URLRequest(url: url))
     }
 
     // The web content process was killed (almost always jetsam memory pressure
     // during game load). Without this handler the view goes blank/limbo; with a
-    // plain reload the user silently loses their session. Reload and mark the
-    // boot as crash recovery — but only a bounded number of times, because the
-    // fault that kills us is usually deterministic and would otherwise loop.
+    // plain reload the user silently loses their session.
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         let now = CACurrentMediaTime()
         if now - lastCrashTime > Self.crashLoopWindow { contentProcessCrashCount = 0 }
@@ -157,8 +319,7 @@ final class GameViewController: UIViewController, WKNavigationDelegate {
             showUnrecoverableNotice()
             return
         }
-        // Back off: an immediate reload of a deterministic OOM pins the CPU
-        // and the disk and drains the battery with nothing on screen.
+
         let delay = pow(2.0, Double(contentProcessCrashCount - 1))
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
             self?.loadApp(crashed: true)
