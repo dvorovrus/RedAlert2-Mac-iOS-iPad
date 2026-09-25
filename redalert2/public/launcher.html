@@ -94,14 +94,17 @@ async function discoverBundledMods(){
         const mr=await fetch("/gameres/mods/"+encodeURIComponent(id)+"/modcd.ini");
         const meta=mr.ok?parseModIni(await mr.text()):{};
         const name=meta.name||id.replace(/[-_]/g," ").replace(/\\b\\w/g,x=>x.toUpperCase());
+        const engine=String(meta.engine||"ra2").toLowerCase()==="yr"?"yr":"ra2";
+        const engineLabel=engine==="yr"?"YR MOD":"RA2 MOD";
         games.push({
           name:name.toUpperCase(),
           short:(meta.id||id).slice(0,8).toUpperCase(),
-          kind:"RA2 MOD",
-          kicker:"RA2 MOD",
-          desc:meta.description||("Bundled Red Alert 2 mod: "+name+"."),
-          route:"index.html?engine=ra2&mod="+encodeURIComponent(id),
-          routeLabel:"engine=ra2&mod="+id,
+          kind:engineLabel,
+          kicker:engineLabel,
+          engine,
+          desc:meta.description||("Bundled "+(engine==="yr"?"Yuri's Revenge":"Red Alert 2")+" mod: "+name+"."),
+          route:"index.html?engine="+engine+"&mod="+encodeURIComponent(id),
+          routeLabel:"engine="+engine+"&mod="+id,
           image:knownModImage(id)
         });
       }catch(e){console.warn("[launcher] Could not read mod metadata",id,e)}
@@ -114,7 +117,7 @@ function renderChoices(){
     const b=document.createElement("button");
     b.className="choice"+(i===current?" active":"");
     b.dataset.index=String(i);
-    b.innerHTML=g.name+"<small>"+(i<2?(i===0?"Classic":"Expansion"):"RA2 Mod")+"</small>";
+    b.innerHTML=g.name+"<small>"+(i<2?(i===0?"Classic":"Expansion"):(g.engine==="yr"?"YR Mod":"RA2 Mod"))+"</small>";
     b.addEventListener("mouseenter",hoverSound);
     b.addEventListener("click",()=>setGame(i,true));
     choices.appendChild(b);
