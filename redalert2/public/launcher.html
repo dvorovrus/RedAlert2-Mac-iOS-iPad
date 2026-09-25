@@ -29,7 +29,7 @@ body{font-family:Arial,Helvetica,sans-serif;color:white;background:radial-gradie
 .t-row b{color:#fff6a0;font-weight:700;text-align:right}
 .panel{background:linear-gradient(90deg,#777 0,#c8c8c8 7%,#565656 14%,#9d9d9d 23%,#464646 31%,#b5b5b5 42%,#686868 53%,#bfbfbf 62%,#545454 73%,#9f9f9f 83%,#4f4f4f 92%,#aaa 100%);border-left:3px solid #222;padding:max(10px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) 12px;display:flex;flex-direction:column}
 .menu-title{background:#060606;border:2px solid #222;color:var(--yellow);text-align:center;font-size:16px;font-weight:900;padding:11px 6px;margin-bottom:12px;box-shadow:inset 0 0 0 1px #777}
-.choice{border:0;width:100%;min-height:74px;margin-bottom:10px;color:#fff20b;text-shadow:0 2px 2px #400;font:900 18px Arial,sans-serif;cursor:pointer;background:linear-gradient(180deg,#ea321c 0,#a00b07 20%,#6e0000 55%,#b8120b 83%,#5b0000 100%);box-shadow:inset 0 0 0 2px #430000,inset 0 0 0 4px #cb382b,0 2px 0 #262626,0 0 0 2px #3b3b3b;transition:filter .12s ease,transform .08s ease}
+.choices{flex:1;min-height:0;overflow-y:auto;padding:1px 2px 8px;scrollbar-width:none}.choices::-webkit-scrollbar{display:none}.choice{border:0;width:100%;min-height:74px;margin-bottom:10px;color:#fff20b;text-shadow:0 2px 2px #400;font:900 18px Arial,sans-serif;cursor:pointer;background:linear-gradient(180deg,#ea321c 0,#a00b07 20%,#6e0000 55%,#b8120b 83%,#5b0000 100%);box-shadow:inset 0 0 0 2px #430000,inset 0 0 0 4px #cb382b,0 2px 0 #262626,0 0 0 2px #3b3b3b;transition:filter .12s ease,transform .08s ease}
 .choice small{display:block;margin-top:3px;font-size:10px;color:#f6c97b;letter-spacing:.08em;text-transform:uppercase}
 .choice:hover{filter:brightness(1.18)}
 .choice:active{transform:translateY(1px)}
@@ -57,20 +57,70 @@ body{font-family:Arial,Helvetica,sans-serif;color:white;background:radial-gradie
 </div></div></section>
 <aside class="panel">
 <div class="menu-title">MAIN MENU</div>
-<button class="choice active" data-index="0">RED ALERT 2<small>Classic</small></button>
-<button class="choice" data-index="1">YURI'S REVENGE<small>Expansion</small></button>
-<button class="choice" data-index="2">SCORCHED EARTH<small>RA2 Mod</small></button>
+<div class="choices" id="choices"></div>
 <button class="launch" id="launch">LAUNCH</button>
 <div class="helper">ONE APP // THREE MODES</div>
 </aside>
 </div>
 <button class="sound-toggle" id="soundToggle">SOUND: ON</button>
 <script>
-const games=[
+let games=[
 {name:"RED ALERT 2",short:"RA2",kind:"ORIGINAL",kicker:"ORIGINAL CAMPAIGN",desc:"Classic Red Alert 2 with the original factions, maps, and balance.",route:"index.html?engine=ra2",routeLabel:"engine=ra2",image:"launcher-assets/ra2.jpg"},
-{name:"YURI'S REVENGE",short:"YR",kind:"EXPANSION",kicker:"EXPANSION",desc:"The Yuri's Revenge expansion with Yuri's army and expanded content.",route:"index.html?engine=yr",routeLabel:"engine=yr",image:"launcher-assets/yuri.jpg"},
-{name:"SCORCHED EARTH",short:"SE",kind:"MOD",kicker:"RA2 MOD",desc:"Scorched Earth is a large-scale RA2 overhaul with new units, balance, maps, and environments.",route:"index.html?engine=ra2&mod=scorched-earth",routeLabel:"engine=ra2&mod=scorched-earth",image:"launcher-assets/scorched.jpg"}];
-const hero=document.getElementById("hero"),nameEl=document.getElementById("name"),kicker=document.getElementById("kicker"),desc=document.getElementById("desc"),buttons=[...document.querySelectorAll(".choice")],tMode=document.getElementById("tMode"),tClass=document.getElementById("tClass"),tRoute=document.getElementById("tRoute");
+{name:"YURI'S REVENGE",short:"YR",kind:"EXPANSION",kicker:"EXPANSION",desc:"The Yuri's Revenge expansion with Yuri's army and expanded content.",route:"index.html?engine=yr",routeLabel:"engine=yr",image:"launcher-assets/yuri.jpg"}
+];
+const hero=document.getElementById("hero"),nameEl=document.getElementById("name"),kicker=document.getElementById("kicker"),desc=document.getElementById("desc"),choices=document.getElementById("choices"),tMode=document.getElementById("tMode"),tClass=document.getElementById("tClass"),tRoute=document.getElementById("tRoute");
+let buttons=[];
+function parseModIni(text){
+  const out={};let section="";
+  for(const raw of text.split(/\\r?\\n/)){
+    const line=raw.trim();if(!line||line.startsWith(";")||line.startsWith("#"))continue;
+    if(line.startsWith("[")&&line.endsWith("]")){section=line.slice(1,-1).trim().toLowerCase();continue}
+    if(section==="general"&&line.includes("=")){const p=line.indexOf("=");out[line.slice(0,p).trim().toLowerCase()]=line.slice(p+1).split(";")[0].trim()}
+  }
+  return out;
+}
+function knownModImage(id){
+  if(id==="scorched-earth")return "launcher-assets/scorched.jpg";
+  return "launcher-assets/ra2.jpg";
+}
+async function discoverBundledMods(){
+  try{
+    const res=await fetch("/gameres/manifest.json");
+    if(!res.ok)return;
+    const manifest=await res.json();
+    const ids=[...new Set((manifest.files||[]).map(f=>String(f.path||"").match(/^mods\\/([A-Za-z0-9_-]+)\\/modcd\\.ini$/i)?.[1]).filter(Boolean))];
+    for(const id of ids){
+      try{
+        const mr=await fetch("/gameres/mods/"+encodeURIComponent(id)+"/modcd.ini");
+        const meta=mr.ok?parseModIni(await mr.text()):{};
+        const name=meta.name||id.replace(/[-_]/g," ").replace(/\\b\\w/g,x=>x.toUpperCase());
+        games.push({
+          name:name.toUpperCase(),
+          short:(meta.id||id).slice(0,8).toUpperCase(),
+          kind:"RA2 MOD",
+          kicker:"RA2 MOD",
+          desc:meta.description||("Bundled Red Alert 2 mod: "+name+"."),
+          route:"index.html?engine=ra2&mod="+encodeURIComponent(id),
+          routeLabel:"engine=ra2&mod="+id,
+          image:knownModImage(id)
+        });
+      }catch(e){console.warn("[launcher] Could not read mod metadata",id,e)}
+    }
+  }catch(e){console.warn("[launcher] Could not discover bundled mods",e)}
+}
+function renderChoices(){
+  choices.innerHTML="";
+  buttons=games.map((g,i)=>{
+    const b=document.createElement("button");
+    b.className="choice"+(i===current?" active":"");
+    b.dataset.index=String(i);
+    b.innerHTML=g.name+"<small>"+(i<2?(i===0?"Classic":"Expansion"):"RA2 Mod")+"</small>";
+    b.addEventListener("mouseenter",hoverSound);
+    b.addEventListener("click",()=>setGame(i,true));
+    choices.appendChild(b);
+    return b;
+  });
+}
 let current=0,audioCtx=null,master=null,musicBus=null,sfxBus=null,soundEnabled=localStorage.getItem("launcherSound")!=="off",musicStarted=false,musicTimer=null;
 document.getElementById("soundToggle").textContent="SOUND: "+(soundEnabled?"ON":"OFF");
 function ensureAudio(){if(!soundEnabled)return false;if(!audioCtx){audioCtx=new(window.AudioContext||window.webkitAudioContext)();master=audioCtx.createGain();master.gain.value=.72;master.connect(audioCtx.destination);musicBus=audioCtx.createGain();musicBus.gain.value=.22;musicBus.connect(master);sfxBus=audioCtx.createGain();sfxBus.gain.value=.55;sfxBus.connect(master)}if(audioCtx.state==="suspended")audioCtx.resume();if(!musicStarted)startMusic();return true}
@@ -81,7 +131,7 @@ function selectSound(){if(!ensureAudio())return;noiseBurst(.045,.025);tone(180,.
 function launchSound(){if(!ensureAudio())return;noiseBurst(.09,.045);tone(120,.22,"sawtooth",.09);tone(240,.18,"square",.06,.05);tone(480,.15,"square",.045,.12);tone(720,.16,"square",.035,.20)}
 function startMusic(){if(!audioCtx||musicStarted||!soundEnabled)return;musicStarted=true;const d1=audioCtx.createOscillator(),d2=audioCtx.createOscillator(),g=audioCtx.createGain(),lp=audioCtx.createBiquadFilter();d1.type="sawtooth";d2.type="triangle";d1.frequency.value=55;d2.frequency.value=82.5;lp.type="lowpass";lp.frequency.value=260;g.gain.value=.028;d1.connect(lp);d2.connect(lp);lp.connect(g);g.connect(musicBus);d1.start();d2.start();const seq=[110,0,165,0,110,220,0,165];let step=0;musicTimer=setInterval(()=>{if(!audioCtx||!soundEnabled)return;const f=seq[step++%seq.length];if(f)tone(f,.14,"square",.018,0,musicBus)},330)}
 function setGame(i,play=true){current=i;const g=games[i];buttons.forEach((b,n)=>b.classList.toggle("active",n===i));if(play)selectSound();hero.style.opacity="0";setTimeout(()=>{hero.style.backgroundImage='url("'+g.image+'")';nameEl.textContent=g.name;kicker.textContent=g.kicker;desc.textContent=g.desc;tMode.textContent=g.short;tClass.textContent=g.kind;tRoute.textContent=g.routeLabel;hero.style.opacity="1"},100)}
-buttons.forEach((b,i)=>{b.addEventListener("mouseenter",hoverSound);b.addEventListener("click",()=>setGame(i,true))});
+
 document.getElementById("launch").addEventListener("mouseenter",hoverSound);
 document.getElementById("launch").onclick=()=>{ensureAudio();launchSound();const target=games[current].route;setTimeout(()=>{window.location.href=target},240)};
 document.getElementById("soundToggle").onclick=()=>{if(!audioCtx&&soundEnabled)ensureAudio();soundEnabled=!soundEnabled;localStorage.setItem("launcherSound",soundEnabled?"on":"off");document.getElementById("soundToggle").textContent="SOUND: "+(soundEnabled?"ON":"OFF");if(audioCtx&&master)master.gain.setTargetAtTime(soundEnabled?.72:0,audioCtx.currentTime,.03);if(soundEnabled)ensureAudio()};
@@ -93,7 +143,7 @@ document.addEventListener("gestureend",e=>e.preventDefault(),{passive:false});
 let lastTouchEnd=0;
 document.addEventListener("touchend",e=>{const now=Date.now();if(now-lastTouchEnd<=300)e.preventDefault();lastTouchEnd=now},{passive:false});
 window.addEventListener("pointerdown",()=>ensureAudio(),{once:true});
-setGame(0,false);
+(async()=>{await discoverBundledMods();renderChoices();setGame(0,false)})();
 </script>
 </body>
 </html>
