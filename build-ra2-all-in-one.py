@@ -12,6 +12,7 @@ from pathlib import Path
 MOD_ID = "scorched-earth"
 SUPPORTED_MOD_EXT = {
     ".mix", ".mmx", ".ini", ".csf", ".mpr", ".map", ".pkt", ".png", ".webm",
+    ".bag", ".idx",
 }
 
 def die(msg: str) -> None:
@@ -161,7 +162,8 @@ def main() -> None:
             if not str(f.get("path", "")).lower().startswith(f"mods/{MOD_ID}/")
         ]
 
-        meta = mod_meta()
+        original_meta = mod / "modcd.ini"
+        meta = original_meta.read_bytes() if original_meta.is_file() else mod_meta()
         manifest_files.append({"path": f"mods/{MOD_ID}/modcd.ini", "size": len(meta)})
         for src in mod_files:
             manifest_files.append({
