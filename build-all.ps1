@@ -27,12 +27,21 @@ if (-not (Test-Path $base)) {
     throw "Missing: $base"
 }
 
-$mods = Get-ChildItem $modsDir -Directory | Sort-Object Name
-if ($mods.Count -eq 0) {
-    throw "No mods found in $modsDir"
+$allModDirs = Get-ChildItem $modsDir -Directory | Sort-Object Name
+$mods = @($allModDirs | Where-Object { Test-Path (Join-Path $_.FullName "modcd.ini") })
+$workDirs = @($allModDirs | Where-Object { -not (Test-Path (Join-Path $_.FullName "modcd.ini")) })
+
+if ($workDirs.Count -gt 0) {
+    Write-Host "Work/unprepared folders (skipped):" -ForegroundColor DarkYellow
+    $workDirs | ForEach-Object { Write-Host "  - $($_.Name)" }
+    Write-Host ""
 }
 
-Write-Host "Mods:" -ForegroundColor Yellow
+if ($mods.Count -eq 0) {
+    throw "No prepared mods with modcd.ini found in $modsDir"
+}
+
+Write-Host "Mods to package:" -ForegroundColor Yellow
 $mods | ForEach-Object { Write-Host "  - $($_.Name)" }
 Write-Host ""
 
