@@ -3,100 +3,212 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Red Alert Collection</title>
+<title>Red Alert 2 — All-in-One Launcher</title>
 <style>
-:root{--yellow:#fff300}
-*{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}\nhtml,body{touch-action:manipulation}
-html,body{margin:0;width:100%;height:100%;background:#050505;overflow:hidden}
-body{font-family:Arial,Helvetica,sans-serif;color:white;background:radial-gradient(circle at 30% 50%,rgba(130,0,0,.18),transparent 35%),linear-gradient(#070707,#000)}
-.scan{position:fixed;inset:0;pointer-events:none;opacity:.2;background:repeating-linear-gradient(180deg,transparent 0 3px,rgba(255,255,255,.02) 3px 4px)}
-.frame{position:fixed;inset:0;width:100vw;height:100dvh;margin:0;display:grid;grid-template-columns:minmax(0,1fr) clamp(280px,25vw,340px);border:0;border-radius:0;background:#111;box-shadow:none;overflow:hidden}
-.screen-wrap{position:relative;padding:max(10px,env(safe-area-inset-top)) 12px max(10px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));background:linear-gradient(90deg,#777 0,#c8c8c8 7%,#565656 14%,#9d9d9d 23%,#464646 31%,#b5b5b5 42%,#686868 53%,#bfbfbf 62%,#545454 73%,#9f9f9f 83%,#4f4f4f 92%,#aaa 100%)}
-.screen-bezel{height:100%;border-radius:42px 42px 18px 18px;padding:16px;background:linear-gradient(145deg,#1d1d1d,#0b0b0b 48%,#2b2b2b);box-shadow:inset 0 0 0 3px #151515,inset 0 0 28px #000,0 0 0 2px #858585}
-.screen{position:relative;height:100%;border-radius:34px;overflow:hidden;background:#120202;box-shadow:inset 0 0 70px #000}
-.hero{position:absolute;inset:0;background-size:cover;background-position:center;transition:opacity .25s ease,transform .45s ease;transform:scale(1.02)}
-.hero:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.05),rgba(0,0,0,.18)),linear-gradient(0deg,rgba(0,0,0,.84),transparent 46%)}
-.hero:before{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;background:repeating-linear-gradient(180deg,rgba(255,255,255,.025) 0 2px,rgba(0,0,0,.03) 2px 4px)}
-.screen-copy{position:absolute;left:32px;right:32px;bottom:28px;z-index:5;text-shadow:0 2px 7px #000}
-.kicker{display:inline-block;padding:4px 8px;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;background:#050505cc;border:1px solid #ffffff22;color:#f0d074;margin-bottom:8px}
-.screen-copy h1{margin:0;font-size:42px;line-height:.95;text-transform:uppercase;font-weight:900;letter-spacing:-.03em}
-.screen-copy p{margin:9px 0 0;color:#ddd6c6;font-size:14px;max-width:620px}
-.corner{position:absolute;z-index:7;top:18px;left:20px;font:700 11px "Courier New",monospace;color:#fff000;text-shadow:0 0 6px #8d7600}
-.tactical{position:absolute;top:18px;right:20px;z-index:8;width:250px;background:rgba(0,0,0,.66);border:1px solid rgba(255,243,0,.35);box-shadow:0 0 14px rgba(125,88,0,.24),inset 0 0 0 1px rgba(255,255,255,.06);padding:10px 12px;font-family:"Courier New",monospace}
+:root{
+  --yellow:#fff300;
+  --yellow-soft:#f0d074;
+  --metal:linear-gradient(90deg,#777 0,#c8c8c8 7%,#565656 14%,#9d9d9d 23%,#464646 31%,#b5b5b5 42%,#686868 53%,#bfbfbf 62%,#545454 73%,#9f9f9f 83%,#4f4f4f 92%,#aaa 100%);
+}
+*{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050505;touch-action:manipulation}
+body{font-family:Arial,Helvetica,sans-serif;color:#fff;background:#050505}
+button,a{font:inherit}
+.scan{position:fixed;inset:0;z-index:100;pointer-events:none;opacity:.18;background:repeating-linear-gradient(180deg,transparent 0 3px,rgba(255,255,255,.025) 3px 4px)}
+.frame{position:fixed;inset:0;width:100vw;height:100dvh;display:grid;grid-template-columns:minmax(0,1fr) clamp(320px,26vw,380px);background:#111;overflow:hidden}
+.screen-wrap{position:relative;padding:max(10px,env(safe-area-inset-top)) 12px max(10px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));background:var(--metal)}
+.screen-bezel{height:100%;padding:16px;border-radius:42px 42px 18px 18px;background:linear-gradient(145deg,#1d1d1d,#080808 48%,#2b2b2b);box-shadow:inset 0 0 0 3px #151515,inset 0 0 28px #000,0 0 0 2px #858585}
+.screen{position:relative;height:100%;overflow:hidden;border-radius:34px;background:#120202;box-shadow:inset 0 0 70px #000;perspective:1000px}
+.hero{position:absolute;inset:-4%;overflow:hidden;background:#100;transform:translateZ(0)}
+.hero-image{position:absolute;inset:-5%;width:110%;height:110%;object-fit:cover;object-position:center;opacity:0;will-change:transform,opacity,filter;transform:translate3d(0,0,0) scale(1.06);filter:saturate(.95) contrast(1.04) brightness(.76);transition:opacity .34s ease,filter .35s ease}
+.hero-image.ready{opacity:1}
+.hero-image.switching{opacity:0}
+.hero-vignette{position:absolute;inset:0;z-index:2;pointer-events:none;background:radial-gradient(circle at 50% 45%,transparent 15%,rgba(0,0,0,.18) 58%,rgba(0,0,0,.74) 100%),linear-gradient(90deg,rgba(0,0,0,.08),rgba(0,0,0,.26)),linear-gradient(0deg,rgba(0,0,0,.88),transparent 45%)}
+.hero-shimmer{position:absolute;inset:-20%;z-index:3;pointer-events:none;opacity:.18;background:linear-gradient(110deg,transparent 35%,rgba(255,40,20,.18) 48%,rgba(255,220,120,.08) 50%,transparent 64%);transform:translateX(-34%);animation:shimmer 9s ease-in-out infinite}
+@keyframes shimmer{0%,20%{transform:translateX(-34%)}55%,75%{transform:translateX(34%)}100%{transform:translateX(-34%)}}
+.screen:after{content:"";position:absolute;inset:0;z-index:4;pointer-events:none;background:repeating-linear-gradient(180deg,rgba(255,255,255,.022) 0 2px,rgba(0,0,0,.035) 2px 4px)}
+.corner{position:absolute;z-index:8;top:18px;left:20px;font:700 11px "Courier New",monospace;color:#fff000;text-shadow:0 0 6px #8d7600}
+.tactical{position:absolute;top:18px;right:20px;z-index:9;width:250px;padding:10px 12px;background:rgba(0,0,0,.72);border:1px solid rgba(255,243,0,.36);box-shadow:0 0 14px rgba(125,88,0,.24),inset 0 0 0 1px rgba(255,255,255,.06);font-family:"Courier New",monospace}
 .tactical-title{color:var(--yellow);font-size:12px;font-weight:700;margin-bottom:8px;letter-spacing:.08em}
 .t-row{display:flex;justify-content:space-between;gap:10px;font-size:11px;color:#d8d0b2;padding:3px 0;border-top:1px solid rgba(255,255,255,.06)}
-.t-row:first-of-type{border-top:none}
-.t-row b{color:#fff6a0;font-weight:700;text-align:right}
-.panel{background:linear-gradient(90deg,#777 0,#c8c8c8 7%,#565656 14%,#9d9d9d 23%,#464646 31%,#b5b5b5 42%,#686868 53%,#bfbfbf 62%,#545454 73%,#9f9f9f 83%,#4f4f4f 92%,#aaa 100%);border-left:3px solid #222;padding:max(10px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) 12px;display:flex;flex-direction:column}
-.menu-title{background:#060606;border:2px solid #222;color:var(--yellow);text-align:center;font-size:16px;font-weight:900;padding:11px 6px;margin-bottom:12px;box-shadow:inset 0 0 0 1px #777}
-.choices{flex:1;min-height:0;overflow-y:auto;padding:1px 2px 8px;scrollbar-width:none}.choices::-webkit-scrollbar{display:none}.choice{border:0;width:100%;min-height:74px;margin-bottom:10px;color:#fff20b;text-shadow:0 2px 2px #400;font:900 18px Arial,sans-serif;cursor:pointer;background:linear-gradient(180deg,#ea321c 0,#a00b07 20%,#6e0000 55%,#b8120b 83%,#5b0000 100%);box-shadow:inset 0 0 0 2px #430000,inset 0 0 0 4px #cb382b,0 2px 0 #262626,0 0 0 2px #3b3b3b;transition:filter .12s ease,transform .08s ease}
-.choice small{display:block;margin-top:3px;font-size:10px;color:#f6c97b;letter-spacing:.08em;text-transform:uppercase}
+.t-row:first-of-type{border-top:0}
+.t-row b{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#fff6a0;text-align:right}
+.screen-copy{position:absolute;z-index:10;left:32px;right:32px;bottom:28px;text-shadow:0 2px 7px #000}
+.kicker{display:inline-block;padding:4px 8px;margin-bottom:8px;border:1px solid #ffffff22;background:#050505cc;color:var(--yellow-soft);font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.screen-copy h1{margin:0;font-size:42px;line-height:.95;text-transform:uppercase;font-weight:900;letter-spacing:-.03em}
+.screen-copy p{margin:9px 0 0;max-width:670px;color:#ddd6c6;font-size:14px}
+.panel{min-width:0;display:flex;flex-direction:column;gap:7px;padding:max(10px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) 12px;border-left:3px solid #222;background:var(--metal)}
+.menu-title{flex:0 0 auto;padding:10px 6px;background:#060606;border:2px solid #222;box-shadow:inset 0 0 0 1px #777;color:var(--yellow);text-align:center;font-size:16px;font-weight:900}
+.choices{flex:1 1 auto;min-height:0;overflow-y:auto;padding:1px 2px 2px;scrollbar-width:none}
+.choices::-webkit-scrollbar{display:none}
+.choice{width:100%;min-height:52px;margin-bottom:7px;padding:6px 8px;border:0;cursor:pointer;color:#fff20b;text-shadow:0 2px 2px #400;font:900 14px Arial,sans-serif;line-height:1.05;background:linear-gradient(180deg,#ea321c 0,#a00b07 20%,#6e0000 55%,#b8120b 83%,#5b0000 100%);box-shadow:inset 0 0 0 2px #430000,inset 0 0 0 4px #cb382b,0 2px 0 #262626,0 0 0 2px #3b3b3b;transition:filter .12s ease,transform .08s ease}
+.choice small{display:block;margin-top:4px;color:#f6c97b;font-size:9px;letter-spacing:.09em;text-transform:uppercase}
 .choice:hover{filter:brightness(1.18)}
 .choice:active{transform:translateY(1px)}
-.choice.active{filter:brightness(1.28);box-shadow:inset 0 0 0 2px #5e0000,inset 0 0 0 4px #ff5037,0 0 16px #b3110e88,0 0 0 2px #3b3b3b}
-.launch{margin-top:auto;min-height:62px;border:0;cursor:pointer;color:#fff20b;font:900 20px Arial,sans-serif;text-shadow:0 2px 2px #400;background:linear-gradient(#d42114,#790000 52%,#b6160d);box-shadow:inset 0 0 0 3px #ef4d38,0 0 0 2px #202020}
+.choice.active{filter:brightness(1.3);box-shadow:inset 0 0 0 2px #5e0000,inset 0 0 0 4px #ff5037,0 0 16px #b3110e88,0 0 0 2px #3b3b3b}
+.mod-info{flex:0 0 auto;padding:8px 9px;background:rgba(5,5,5,.94);border:1px solid #554e00;box-shadow:inset 0 0 0 1px rgba(255,243,0,.08),0 1px 0 rgba(255,255,255,.25);font-family:"Courier New",monospace}
+.mod-info-title{display:flex;justify-content:space-between;gap:8px;margin-bottom:4px;color:var(--yellow);font-size:9px;font-weight:800;letter-spacing:.09em}
+.info-row{min-height:18px;display:grid;grid-template-columns:62px minmax(0,1fr);gap:8px;align-items:center;border-top:1px solid rgba(255,255,255,.06);font-size:9px}
+.info-label{color:#8e897a}
+.info-value{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#fff3a2}
+.info-links{display:flex;gap:6px;margin-top:6px}
+.info-link{flex:1;min-height:26px;display:flex;align-items:center;justify-content:center;padding:4px 6px;border:1px solid #5f5900;background:#111;color:#fff300;text-decoration:none;text-align:center;font:800 9px "Courier New",monospace;letter-spacing:.04em}
+.info-link.disabled{opacity:.3;pointer-events:none}
+.launch{flex:0 0 auto;min-height:56px;border:0;cursor:pointer;color:#fff20b;font:900 20px Arial,sans-serif;text-shadow:0 2px 2px #400;background:linear-gradient(#d42114,#790000 52%,#b6160d);box-shadow:inset 0 0 0 3px #ef4d38,0 0 0 2px #202020}
 .launch:hover{filter:brightness(1.15)}
-.helper{margin-top:10px;text-align:right;color:#d8ef19;font-weight:800;font-size:12px;text-shadow:0 1px 2px #000}
-.sound-toggle{position:absolute;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));z-index:60;border:1px solid #6d6500;background:#080808e8;color:#fff300;padding:9px 12px;font:700 11px "Courier New",monospace;cursor:pointer;box-shadow:0 0 12px #000}
-@media(max-width:900px){.frame{grid-template-columns:minmax(0,1fr) 270px}.choice{font-size:15px}.screen-copy h1{font-size:32px}.tactical{width:220px}}
+.panel-footer{flex:0 0 auto;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;align-items:stretch}
+.sound-toggle{position:static;min-height:32px;padding:6px 9px;border:1px solid #6d6500;cursor:pointer;background:#080808e8;color:#fff300;box-shadow:inset 0 0 0 1px #222;font:700 10px "Courier New",monospace}
+.sound-toggle:hover{background:#161600}
+.helper{display:flex;align-items:center;justify-content:flex-end;white-space:nowrap;color:#d8ef19;text-shadow:0 1px 2px #000;font-size:10px;font-weight:800}
+@media(max-width:1050px){.frame{grid-template-columns:minmax(0,1fr) 310px}.choice{min-height:49px;font-size:13px}.screen-copy h1{font-size:36px}.tactical{width:220px}}
+@media(max-width:900px){.frame{grid-template-columns:minmax(0,1fr) 280px}.panel{gap:5px}.choice{min-height:45px;font-size:12px}.screen-copy h1{font-size:31px}.tactical{width:205px}.mod-info{padding:6px 7px}}
 </style>
 </head>
 <body>
 <div class="scan"></div>
 <div class="frame">
-<section class="screen-wrap"><div class="screen-bezel"><div class="screen">
-<div class="hero" id="hero"></div>
-<div class="corner">WESTWOOD TACTICAL INTERFACE // RA2</div>
-<div class="tactical">
-<div class="tactical-title">TACTICAL DATA</div>
-<div class="t-row"><span>MODE</span><b id="tMode">RA2</b></div>
-<div class="t-row"><span>CLASS</span><b id="tClass">ORIGINAL</b></div>
-<div class="t-row"><span>ROUTE</span><b id="tRoute">engine=ra2</b></div>
+  <section class="screen-wrap">
+    <div class="screen-bezel">
+      <div class="screen" id="tvScreen">
+        <div class="hero">
+          <img id="heroImage" class="hero-image" alt="">
+          <div class="hero-vignette"></div>
+          <div class="hero-shimmer"></div>
+        </div>
+        <div class="corner">WESTWOOD TACTICAL INTERFACE // RA2</div>
+        <div class="tactical">
+          <div class="tactical-title">TACTICAL DATA</div>
+          <div class="t-row"><span>MODE</span><b id="tMode">RA2</b></div>
+          <div class="t-row"><span>CLASS</span><b id="tClass">ORIGINAL</b></div>
+          <div class="t-row"><span>ROUTE</span><b id="tRoute">engine=ra2</b></div>
+        </div>
+        <div class="screen-copy">
+          <div class="kicker" id="kicker">ORIGINAL CAMPAIGN</div>
+          <h1 id="name">RED ALERT 2</h1>
+          <p id="desc">Classic Red Alert 2 with the original factions, maps, and balance.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+  <aside class="panel">
+    <div class="menu-title">MAIN MENU</div>
+    <div class="choices" id="choices"></div>
+    <section class="mod-info">
+      <div class="mod-info-title"><span>GAME / MOD INFO</span><span id="infoType">ORIGINAL</span></div>
+      <div class="info-row"><span class="info-label">CREATOR</span><span class="info-value" id="infoCreator">Westwood Studios</span></div>
+      <div class="info-row"><span class="info-label">VERSION</span><span class="info-value" id="infoVersion">1.006</span></div>
+      <div class="info-links">
+        <a class="info-link disabled" id="authorLink" href="#" target="_blank" rel="noopener noreferrer">CREATOR ↗</a>
+        <a class="info-link disabled" id="modLink" href="#" target="_blank" rel="noopener noreferrer">MOD PAGE ↗</a>
+      </div>
+    </section>
+    <button class="launch" id="launch">LAUNCH</button>
+    <div class="panel-footer">
+      <button class="sound-toggle" id="soundToggle">SOUND: ON</button>
+      <div class="helper" id="helper">ONE APP // 2 MODES</div>
+    </div>
+  </aside>
 </div>
-<div class="screen-copy"><div class="kicker" id="kicker">ORIGINAL CAMPAIGN</div><h1 id="name">RED ALERT 2</h1><p id="desc">Classic Red Alert 2 with the original factions, maps, and balance.</p></div>
-</div></div></section>
-<aside class="panel">
-<div class="menu-title">MAIN MENU</div>
-<div class="choices" id="choices"></div>
-<button class="launch" id="launch">LAUNCH</button>
-<div class="helper" id="helper">ONE APP // 2 MODES</div>
-</aside>
-</div>
-<button class="sound-toggle" id="soundToggle">SOUND: ON</button>
 <script>
+const knownModInfo={
+  "eagle-red":{
+    creator:"Team Eagle",
+    version:"1.45",
+    creatorUrl:"https://www.moddb.com/mods/eagle-red-145",
+    modUrl:"https://www.moddb.com/mods/eagle-red-145",
+    image:"launcher-assets/eagle-red.jpg",
+    fallback:"launcher-assets/ra2.jpg",
+    focal:"50% 48%"
+  },
+  "moomans-rules-ra2":{
+    creator:"MooMan65",
+    version:"3.0",
+    creatorUrl:"https://www.moddb.com/members/mooman65",
+    modUrl:"https://www.moddb.com/mods/moomans-rules",
+    image:"launcher-assets/moomans-rules.jpg",
+    fallback:"launcher-assets/ra2.jpg",
+    focal:"45% 47%"
+  },
+  "moomans-rules-yr":{
+    creator:"MooMan65",
+    version:"3.0",
+    creatorUrl:"https://www.moddb.com/members/mooman65",
+    modUrl:"https://www.moddb.com/mods/moomans-rules",
+    image:"launcher-assets/moomans-rules.jpg",
+    fallback:"launcher-assets/yuri.jpg",
+    focal:"67% 47%"
+  },
+  "scorched-earth":{
+    creator:"ATHSE",
+    version:"2023-07-20",
+    creatorUrl:"https://www.moddb.com/members/athse",
+    modUrl:"https://www.moddb.com/mods/scorched-earth-ra2-mod-with-smart-ai",
+    image:"launcher-assets/scorched.jpg",
+    fallback:"launcher-assets/ra2.jpg",
+    focal:"52% 52%"
+  }
+};
 let games=[
-{name:"RED ALERT 2",short:"RA2",kind:"ORIGINAL",kicker:"ORIGINAL CAMPAIGN",desc:"Classic Red Alert 2 with the original factions, maps, and balance.",route:"index.html?engine=ra2",routeLabel:"engine=ra2",image:"launcher-assets/ra2.jpg"},
-{name:"YURI'S REVENGE",short:"YR",kind:"EXPANSION",kicker:"EXPANSION",desc:"The Yuri's Revenge expansion with Yuri's army and expanded content.",route:"index.html?engine=yr",routeLabel:"engine=yr",image:"launcher-assets/yuri.jpg"}
+  {id:"ra2",name:"RED ALERT 2",short:"RA2",kind:"ORIGINAL",kicker:"ORIGINAL CAMPAIGN",desc:"Classic Red Alert 2 with the original factions, maps, and balance.",route:"index.html?engine=ra2",routeLabel:"engine=ra2",engine:"ra2",creator:"Westwood Studios",version:"1.006",creatorUrl:"",modUrl:"",image:"launcher-assets/ra2.jpg",fallback:"",focal:"50% 45%"},
+  {id:"yr",name:"YURI'S REVENGE",short:"YR",kind:"EXPANSION",kicker:"EXPANSION",desc:"Yuri's Revenge with Yuri's army, expanded units, maps and mechanics.",route:"index.html?engine=yr",routeLabel:"engine=yr",engine:"yr",creator:"Westwood Studios",version:"1.001",creatorUrl:"",modUrl:"",image:"launcher-assets/yuri.jpg",fallback:"launcher-assets/ra2.jpg",focal:"50% 35%"}
 ];
-const hero=document.getElementById("hero"),nameEl=document.getElementById("name"),kicker=document.getElementById("kicker"),desc=document.getElementById("desc"),choices=document.getElementById("choices"),tMode=document.getElementById("tMode"),tClass=document.getElementById("tClass"),tRoute=document.getElementById("tRoute");
-let buttons=[];
+const $=id=>document.getElementById(id);
+const tvScreen=$("tvScreen"),heroImage=$("heroImage"),choices=$("choices"),nameEl=$("name"),kicker=$("kicker"),desc=$("desc"),tMode=$("tMode"),tClass=$("tClass"),tRoute=$("tRoute"),infoCreator=$("infoCreator"),infoVersion=$("infoVersion"),infoType=$("infoType"),authorLink=$("authorLink"),modLink=$("modLink"),helper=$("helper");
+let buttons=[],current=0,audioCtx=null,master=null,musicBus=null,sfxBus=null,soundEnabled=localStorage.getItem("launcherSound")!=="off",musicStarted=false,musicTimer=null;
+let targetX=0,targetY=0,currentX=0,currentY=0,autoPhase=0,switchToken=0;
+function animateHero(){
+  autoPhase+=0.006;
+  const autoX=Math.sin(autoPhase)*4.2,autoY=Math.cos(autoPhase*.78)*3.0;
+  currentX+=(targetX-currentX)*.055;
+  currentY+=(targetY-currentY)*.055;
+  const x=currentX+autoX,y=currentY+autoY,breathe=1.072+Math.sin(autoPhase*.65)*.012;
+  heroImage.style.transform=`translate3d(${x}px,${y}px,0) scale(${breathe})`;
+  requestAnimationFrame(animateHero);
+}
+requestAnimationFrame(animateHero);
+function setParallax(clientX,clientY){
+  const r=tvScreen.getBoundingClientRect();
+  if(!r.width||!r.height)return;
+  const nx=((clientX-r.left)/r.width-.5)*2,ny=((clientY-r.top)/r.height-.5)*2;
+  targetX=-nx*16;targetY=-ny*11;
+}
+tvScreen.addEventListener("pointermove",e=>setParallax(e.clientX,e.clientY));
+tvScreen.addEventListener("pointerleave",()=>{targetX=0;targetY=0});
+tvScreen.addEventListener("touchmove",e=>{const t=e.touches&&e.touches[0];if(t)setParallax(t.clientX,t.clientY)},{passive:true});
+tvScreen.addEventListener("touchend",()=>{targetX=0;targetY=0},{passive:true});
 function parseModIni(text){
   const out={};let section="";
-  for(const raw of text.split(/\\r?\\n/)){
-    const line=raw.trim();if(!line||line.startsWith(";")||line.startsWith("#"))continue;
+  for(const raw of text.split(/\r?\n/)){
+    const line=raw.trim();
+    if(!line||line.startsWith(";")||line.startsWith("#"))continue;
     if(line.startsWith("[")&&line.endsWith("]")){section=line.slice(1,-1).trim().toLowerCase();continue}
-    if(section==="general"&&line.includes("=")){const p=line.indexOf("=");out[line.slice(0,p).trim().toLowerCase()]=line.slice(p+1).split(";")[0].trim()}
+    if(section==="general"&&line.includes("=")){
+      const p=line.indexOf("=");
+      out[line.slice(0,p).trim().toLowerCase()]=line.slice(p+1).split(";")[0].trim();
+    }
   }
   return out;
 }
-function knownModImage(id){
-  if(id==="scorched-earth")return "launcher-assets/scorched.jpg";
-  return "launcher-assets/ra2.jpg";
+function setLink(el,url){
+  if(url){el.href=url;el.classList.remove("disabled");el.setAttribute("aria-disabled","false")}
+  else{el.href="#";el.classList.add("disabled");el.setAttribute("aria-disabled","true")}
 }
 async function discoverBundledMods(){
   try{
     const res=await fetch("/gameres/manifest.json");
     if(!res.ok)return;
     const manifest=await res.json();
-    const ids=[...new Set((manifest.files||[]).map(f=>String(f.path||"").match(/^mods\\/([A-Za-z0-9_-]+)\\/modcd\\.ini$/i)?.[1]).filter(Boolean))];
+    const ids=[...new Set((manifest.files||[]).map(f=>String(f.path||"").match(/^mods\/([A-Za-z0-9_-]+)\/modcd\.ini$/i)?.[1]).filter(Boolean))];
     for(const id of ids){
       try{
         const mr=await fetch("/gameres/mods/"+encodeURIComponent(id)+"/modcd.ini");
         const meta=mr.ok?parseModIni(await mr.text()):{};
-        const name=meta.name||id.replace(/[-_]/g," ").replace(/\\b\\w/g,x=>x.toUpperCase());
+        const known=knownModInfo[id]||{};
+        const name=meta.name||id.replace(/[-_]/g," ").replace(/\b\w/g,x=>x.toUpperCase());
         const engine=String(meta.engine||"ra2").toLowerCase()==="yr"?"yr":"ra2";
         const engineLabel=engine==="yr"?"YR MOD":"RA2 MOD";
         games.push({
+          id,
           name:name.toUpperCase(),
           short:(meta.id||id).slice(0,8).toUpperCase(),
           kind:engineLabel,
@@ -105,7 +217,13 @@ async function discoverBundledMods(){
           desc:meta.description||("Bundled "+(engine==="yr"?"Yuri's Revenge":"Red Alert 2")+" mod: "+name+"."),
           route:"index.html?engine="+engine+"&mod="+encodeURIComponent(id),
           routeLabel:"engine="+engine+"&mod="+id,
-          image:knownModImage(id)
+          creator:meta.author||known.creator||"Unknown",
+          version:meta.version||known.version||"Unknown",
+          creatorUrl:meta.authorurl||known.creatorUrl||"",
+          modUrl:meta.website||known.modUrl||"",
+          image:meta.image||known.image||(engine==="yr"?"launcher-assets/yuri.jpg":"launcher-assets/ra2.jpg"),
+          fallback:known.fallback||(engine==="yr"?"launcher-assets/yuri.jpg":"launcher-assets/ra2.jpg"),
+          focal:known.focal||"50% 50%"
         });
       }catch(e){console.warn("[launcher] Could not read mod metadata",id,e)}
     }
@@ -116,40 +234,116 @@ function renderChoices(){
   buttons=games.map((g,i)=>{
     const b=document.createElement("button");
     b.className="choice"+(i===current?" active":"");
-    b.dataset.index=String(i);
     b.innerHTML=g.name+"<small>"+(i<2?(i===0?"Classic":"Expansion"):(g.engine==="yr"?"YR Mod":"RA2 Mod"))+"</small>";
     b.addEventListener("mouseenter",hoverSound);
     b.addEventListener("click",()=>setGame(i,true));
     choices.appendChild(b);
     return b;
   });
-  const helperEl=document.getElementById("helper");
-  if(helperEl)helperEl.textContent="ONE APP // "+games.length+" MODES";
+  helper.textContent="ONE APP // "+games.length+" MODES";
 }
-let current=0,audioCtx=null,master=null,musicBus=null,sfxBus=null,soundEnabled=localStorage.getItem("launcherSound")!=="off",musicStarted=false,musicTimer=null;
-document.getElementById("soundToggle").textContent="SOUND: "+(soundEnabled?"ON":"OFF");
-function ensureAudio(){if(!soundEnabled)return false;if(!audioCtx){audioCtx=new(window.AudioContext||window.webkitAudioContext)();master=audioCtx.createGain();master.gain.value=.72;master.connect(audioCtx.destination);musicBus=audioCtx.createGain();musicBus.gain.value=.22;musicBus.connect(master);sfxBus=audioCtx.createGain();sfxBus.gain.value=.55;sfxBus.connect(master)}if(audioCtx.state==="suspended")audioCtx.resume();if(!musicStarted)startMusic();return true}
-function tone(freq,dur=.08,type="square",vol=.08,when=0,dest=null){if(!audioCtx||!soundEnabled)return;const t=audioCtx.currentTime+when,o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0002,vol),t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g);g.connect(dest||sfxBus);o.start(t);o.stop(t+dur+.03)}
-function noiseBurst(dur=.05,vol=.035,when=0){if(!audioCtx||!soundEnabled)return;const sr=audioCtx.sampleRate,b=audioCtx.createBuffer(1,Math.ceil(sr*dur),sr),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*(1-i/d.length);const s=audioCtx.createBufferSource(),f=audioCtx.createBiquadFilter(),g=audioCtx.createGain();f.type="bandpass";f.frequency.value=1800;f.Q.value=.8;g.gain.value=vol;s.buffer=b;s.connect(f);f.connect(g);g.connect(sfxBus);s.start(audioCtx.currentTime+when)}
+function renderInfo(g){
+  infoCreator.textContent=g.creator||"Unknown";
+  infoVersion.textContent=g.version||"Unknown";
+  infoType.textContent=g.kind||"MOD";
+  setLink(authorLink,g.creatorUrl||"");
+  setLink(modLink,g.modUrl||"");
+}
+function loadHero(g){
+  const token=++switchToken;
+  heroImage.classList.add("switching");
+  const primary=new Image();
+  primary.onload=()=>{
+    if(token!==switchToken)return;
+    heroImage.src=g.image;
+    heroImage.style.objectPosition=g.focal||"50% 50%";
+    heroImage.alt=g.name;
+    heroImage.classList.remove("switching");
+    heroImage.classList.add("ready");
+  };
+  primary.onerror=()=>{
+    if(token!==switchToken)return;
+    if(g.fallback&&g.fallback!==g.image){
+      const fallback=new Image();
+      fallback.onload=()=>{
+        if(token!==switchToken)return;
+        heroImage.src=g.fallback;
+        heroImage.style.objectPosition=g.focal||"50% 50%";
+        heroImage.classList.remove("switching");
+        heroImage.classList.add("ready");
+      };
+      fallback.onerror=()=>{if(token===switchToken)heroImage.classList.remove("ready")};
+      fallback.src=g.fallback;
+    }else{
+      heroImage.classList.remove("ready");
+    }
+  };
+  primary.src=g.image;
+}
+function setGame(i,play=true){
+  current=i;
+  const g=games[i];
+  buttons.forEach((b,n)=>b.classList.toggle("active",n===i));
+  if(play)selectSound();
+  nameEl.textContent=g.name;kicker.textContent=g.kicker;desc.textContent=g.desc;
+  tMode.textContent=g.short;tClass.textContent=g.kind;tRoute.textContent=g.routeLabel;
+  renderInfo(g);loadHero(g);
+}
+$("soundToggle").textContent="SOUND: "+(soundEnabled?"ON":"OFF");
+function ensureAudio(){
+  if(!soundEnabled)return false;
+  if(!audioCtx){
+    audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    master=audioCtx.createGain();master.gain.value=.72;master.connect(audioCtx.destination);
+    musicBus=audioCtx.createGain();musicBus.gain.value=.22;musicBus.connect(master);
+    sfxBus=audioCtx.createGain();sfxBus.gain.value=.55;sfxBus.connect(master);
+  }
+  if(audioCtx.state==="suspended")audioCtx.resume();
+  if(!musicStarted)startMusic();
+  return true;
+}
+function tone(freq,dur=.08,type="square",vol=.08,when=0,dest=null){
+  if(!audioCtx||!soundEnabled)return;
+  const t=audioCtx.currentTime+when,o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type=type;o.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(.0001,t);
+  g.gain.exponentialRampToValueAtTime(Math.max(.0002,vol),t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g);g.connect(dest||sfxBus);o.start(t);o.stop(t+dur+.03);
+}
+function noiseBurst(dur=.05,vol=.035,when=0){
+  if(!audioCtx||!soundEnabled)return;
+  const sr=audioCtx.sampleRate,b=audioCtx.createBuffer(1,Math.ceil(sr*dur),sr),d=b.getChannelData(0);
+  for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*(1-i/d.length);
+  const s=audioCtx.createBufferSource(),f=audioCtx.createBiquadFilter(),g=audioCtx.createGain();
+  f.type="bandpass";f.frequency.value=1800;f.Q.value=.8;g.gain.value=vol;s.buffer=b;s.connect(f);f.connect(g);g.connect(sfxBus);s.start(audioCtx.currentTime+when);
+}
 function hoverSound(){if(!ensureAudio())return;tone(760,.045,"square",.035);tone(980,.035,"square",.022,.035)}
 function selectSound(){if(!ensureAudio())return;noiseBurst(.045,.025);tone(180,.09,"sawtooth",.07);tone(360,.07,"square",.04,.035)}
 function launchSound(){if(!ensureAudio())return;noiseBurst(.09,.045);tone(120,.22,"sawtooth",.09);tone(240,.18,"square",.06,.05);tone(480,.15,"square",.045,.12);tone(720,.16,"square",.035,.20)}
-function startMusic(){if(!audioCtx||musicStarted||!soundEnabled)return;musicStarted=true;const d1=audioCtx.createOscillator(),d2=audioCtx.createOscillator(),g=audioCtx.createGain(),lp=audioCtx.createBiquadFilter();d1.type="sawtooth";d2.type="triangle";d1.frequency.value=55;d2.frequency.value=82.5;lp.type="lowpass";lp.frequency.value=260;g.gain.value=.028;d1.connect(lp);d2.connect(lp);lp.connect(g);g.connect(musicBus);d1.start();d2.start();const seq=[110,0,165,0,110,220,0,165];let step=0;musicTimer=setInterval(()=>{if(!audioCtx||!soundEnabled)return;const f=seq[step++%seq.length];if(f)tone(f,.14,"square",.018,0,musicBus)},330)}
-function setGame(i,play=true){current=i;const g=games[i];buttons.forEach((b,n)=>b.classList.toggle("active",n===i));if(play)selectSound();hero.style.opacity="0";setTimeout(()=>{hero.style.backgroundImage='url("'+g.image+'")';nameEl.textContent=g.name;kicker.textContent=g.kicker;desc.textContent=g.desc;tMode.textContent=g.short;tClass.textContent=g.kind;tRoute.textContent=g.routeLabel;hero.style.opacity="1"},100)}
-
-document.getElementById("launch").addEventListener("mouseenter",hoverSound);
-document.getElementById("launch").onclick=()=>{ensureAudio();launchSound();const target=games[current].route;setTimeout(()=>{window.location.href=target},240)};
-document.getElementById("soundToggle").onclick=()=>{if(!audioCtx&&soundEnabled)ensureAudio();soundEnabled=!soundEnabled;localStorage.setItem("launcherSound",soundEnabled?"on":"off");document.getElementById("soundToggle").textContent="SOUND: "+(soundEnabled?"ON":"OFF");if(audioCtx&&master)master.gain.setTargetAtTime(soundEnabled?.72:0,audioCtx.currentTime,.03);if(soundEnabled)ensureAudio()};
-// Prevent Safari/WKWebView page magnification in the launcher. Camera zoom is
-// implemented by the game itself after index.html is loaded.
+function startMusic(){
+  if(!audioCtx||musicStarted||!soundEnabled)return;
+  musicStarted=true;
+  const d1=audioCtx.createOscillator(),d2=audioCtx.createOscillator(),g=audioCtx.createGain(),lp=audioCtx.createBiquadFilter();
+  d1.type="sawtooth";d2.type="triangle";d1.frequency.value=55;d2.frequency.value=82.5;lp.type="lowpass";lp.frequency.value=260;g.gain.value=.028;
+  d1.connect(lp);d2.connect(lp);lp.connect(g);g.connect(musicBus);d1.start();d2.start();
+  const seq=[110,0,165,0,110,220,0,165];let step=0;
+  musicTimer=setInterval(()=>{if(!audioCtx||!soundEnabled)return;const f=seq[step++%seq.length];if(f)tone(f,.14,"square",.018,0,musicBus)},330);
+}
+$("launch").addEventListener("mouseenter",hoverSound);
+$("launch").onclick=()=>{ensureAudio();launchSound();const target=games[current].route;setTimeout(()=>{window.location.href=target},240)};
+$("soundToggle").onclick=()=>{
+  if(!audioCtx&&soundEnabled)ensureAudio();
+  soundEnabled=!soundEnabled;
+  localStorage.setItem("launcherSound",soundEnabled?"on":"off");
+  $("soundToggle").textContent="SOUND: "+(soundEnabled?"ON":"OFF");
+  if(audioCtx&&master)master.gain.setTargetAtTime(soundEnabled?.72:0,audioCtx.currentTime,.03);
+  if(soundEnabled)ensureAudio();
+};
 document.addEventListener("gesturestart",e=>e.preventDefault(),{passive:false});
 document.addEventListener("gesturechange",e=>e.preventDefault(),{passive:false});
 document.addEventListener("gestureend",e=>e.preventDefault(),{passive:false});
 let lastTouchEnd=0;
 document.addEventListener("touchend",e=>{const now=Date.now();if(now-lastTouchEnd<=300)e.preventDefault();lastTouchEnd=now},{passive:false});
 window.addEventListener("pointerdown",()=>ensureAudio(),{once:true});
-// Render RA2/YR immediately. Mod discovery is asynchronous and must never leave
-// the menu blank if the custom-scheme manifest fetch is slow on WKWebView.
 renderChoices();
 setGame(0,false);
 discoverBundledMods().then(()=>{
