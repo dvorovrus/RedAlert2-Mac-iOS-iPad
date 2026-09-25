@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import bz2
 import json
+import shutil
 import struct
 import zlib
 from collections import Counter
@@ -478,6 +479,8 @@ def main() -> int:
         if args.out
         else (exe_path.parent / "xcc-extracted").resolve()
     )
+    if out.exists():
+        shutil.rmtree(out)
     out.mkdir(parents=True, exist_ok=True)
 
     exe = exe_path.read_bytes()
